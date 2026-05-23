@@ -1,0 +1,47 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_24-f86a61f2ab76c0404f3f730059558da54598985f",
+  "solcVersion": "0.8.24",
+  "solcLongVersion": "0.8.24+commit.e11b9ed9",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/MarketRegistry.sol": "project/contracts/MarketRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "project/contracts/MarketRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.24;\r\n\r\ncontract MarketRegistry {\r\n    enum MarketStatus {\r\n        OPEN,\r\n        PAUSED,\r\n        RESOLVED,\r\n        CANCELLED\r\n    }\r\n\r\n    struct Market {\n        uint256 marketId;\n        string externalMarketId;\n        string platform;\n        string question;\n        string category;\n        string resolutionSource;\n        uint256 deadline;\n        uint256 createdAt;\n        MarketStatus status;\n        address creator;\n        uint256 liquidityHint;\n        uint16 impliedProbability;\n        string marketType;\n        string marketUrl;\n        bytes32 metadataHash;\n    }\n\r\n    uint256 private nextMarketId = 1;\r\n    uint256[] private marketIds;\r\n    mapping(uint256 => Market) private markets;\r\n\r\n    event MarketCreated(\r\n        uint256 indexed marketId,\n        string question,\n        string category,\n        string resolutionSource,\n        uint256 deadline,\n        uint256 liquidityHint,\n        string marketType,\n        address indexed creator\n    );\n\n    event ExternalMarketImported(\n        uint256 indexed marketId,\n        string externalMarketId,\n        string platform,\n        string question,\n        string category,\n        string resolutionSource,\n        uint256 deadline,\n        uint256 liquidityHint,\n        uint16 impliedProbability,\n        string marketType,\n        string marketUrl,\n        bytes32 indexed metadataHash,\n        address indexed creator\n    );\n\n    event MarketStatusUpdated(uint256 indexed marketId, MarketStatus status);\n\n    function createMarket(\n        string calldata question,\n        string calldata category,\n        string calldata resolutionSource,\n        uint256 deadline,\n        uint256 liquidityHint,\n        string calldata marketType\n    ) external returns (uint256 marketId) {\n        marketId = _storeMarket(\n            \"\",\n            \"Arc Testnet\",\n            question,\n            category,\n            resolutionSource,\n            deadline,\n            liquidityHint,\n            0,\n            marketType,\n            \"\",\n            keccak256(abi.encode(question, category, resolutionSource, deadline, liquidityHint, marketType))\n        );\n\n        emit MarketCreated(\n            marketId,\n            question,\n            category,\n            resolutionSource,\n            deadline,\n            liquidityHint,\n            marketType,\n            msg.sender\n        );\n    }\n\n    function importExternalMarket(\n        string calldata externalMarketId,\n        string calldata platform,\n        string calldata question,\n        string calldata category,\n        string calldata resolutionSource,\n        uint256 deadline,\n        uint256 liquidityHint,\n        uint16 impliedProbability,\n        string calldata marketType,\n        string calldata marketUrl,\n        bytes32 metadataHash\n    ) external returns (uint256 marketId) {\n        require(bytes(externalMarketId).length > 0, \"EXTERNAL_ID_REQUIRED\");\n        require(bytes(platform).length > 0, \"PLATFORM_REQUIRED\");\n        require(bytes(marketUrl).length > 0, \"MARKET_URL_REQUIRED\");\n        require(metadataHash != bytes32(0), \"METADATA_HASH_REQUIRED\");\n\n        marketId = _storeMarket(\n            externalMarketId,\n            platform,\n            question,\n            category,\n            resolutionSource,\n            deadline,\n            liquidityHint,\n            impliedProbability,\n            marketType,\n            marketUrl,\n            metadataHash\n        );\n\n        emit ExternalMarketImported(\n            marketId,\n            externalMarketId,\n            platform,\n            question,\n            category,\n            resolutionSource,\n            deadline,\n            liquidityHint,\n            impliedProbability,\n            marketType,\n            marketUrl,\n            metadataHash,\n            msg.sender\n        );\n    }\n\n    function _storeMarket(\n        string memory externalMarketId,\n        string memory platform,\n        string memory question,\n        string memory category,\n        string memory resolutionSource,\n        uint256 deadline,\n        uint256 liquidityHint,\n        uint16 impliedProbability,\n        string memory marketType,\n        string memory marketUrl,\n        bytes32 metadataHash\n    ) private returns (uint256 marketId) {\n        require(bytes(question).length > 0, \"QUESTION_REQUIRED\");\n        require(bytes(resolutionSource).length > 0, \"SOURCE_REQUIRED\");\n        require(deadline > block.timestamp, \"DEADLINE_IN_PAST\");\n\n        marketId = nextMarketId++;\n        markets[marketId] = Market({\n            marketId: marketId,\n            externalMarketId: externalMarketId,\n            platform: platform,\n            question: question,\n            category: category,\n            resolutionSource: resolutionSource,\n            deadline: deadline,\n            createdAt: block.timestamp,\n            status: MarketStatus.OPEN,\n            creator: msg.sender,\n            liquidityHint: liquidityHint,\n            impliedProbability: impliedProbability,\n            marketType: marketType,\n            marketUrl: marketUrl,\n            metadataHash: metadataHash\n        });\n        marketIds.push(marketId);\n    }\n\r\n    function updateMarketStatus(uint256 marketId, MarketStatus status) external {\r\n        Market storage market = markets[marketId];\r\n        require(market.creator != address(0), \"MARKET_NOT_FOUND\");\r\n        require(msg.sender == market.creator, \"ONLY_CREATOR\");\r\n\r\n        market.status = status;\r\n        emit MarketStatusUpdated(marketId, status);\r\n    }\r\n\r\n    function getMarket(uint256 marketId) external view returns (Market memory) {\r\n        Market memory market = markets[marketId];\r\n        require(market.creator != address(0), \"MARKET_NOT_FOUND\");\r\n        return market;\r\n    }\r\n\r\n    function getMarkets() external view returns (Market[] memory results) {\r\n        results = new Market[](marketIds.length);\r\n        for (uint256 i = 0; i < marketIds.length; i++) {\r\n            results[i] = markets[marketIds[i]];\r\n        }\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}

@@ -1,58 +1,74 @@
-import type { PublicSignal, SignalDataState } from "./types";
+/**
+ * src/lib/signals/index.ts
+ *
+ * Signal orchestrator: GDELT → Google News RSS → Cache → Error.
+ *
+ * Provider flow:
+ *  1. If cache is fresh (< 3 min), return immediately.
+ *  2. Try GDELT. On success, cache and return.
+ *  3. If GDELT fails or returns empty, try Google News RSS.
+ *  4. If RSS succeeds, cache and return.
+ *  5. If both fail, return stale cache as "Cached" source.
+ *  6. If no cache exists, return clean error state.
+ *
+ * No NEWS_API_KEY required.
+ * All external calls are server-side only — never call this from a client component.
+ */
 
-type NewsApiArticle = {
-  title?: string;
-  description?: string;
-  url?: string;
-  publishedAt?: string;
-  source?: { name?: string };
-};
+import { fetchGdeltSignals } from "./gdelt";
+import { fetchGoogleNewsRssSignals } from "./google-news-rss";
+import { isCacheFresh, readCache, writeCache } from "./cache";
+import type { SignalDataState } from "./types";
 
 export async function getPublicSignals(): Promise<SignalDataState> {
-  const apiKey = process.env.NEWS_API_KEY;
-  if (!apiKey) {
+  // ── 1. Serve from fresh cache immediately ─────────────────────────────────
+  if (isCacheFresh()) {
+    const entry = readCache()!;
     return {
-      status: "not-configured",
-      missing: ["NEWS_API_KEY"],
-      message: "Signal API not configured. Add NEWS_API_KEY to load public market signals.",
+      status: "configured",
+      signals: entry.signals,
+      provider: entry.provider,
     };
   }
 
+  // ── 2. Try GDELT (primary) ────────────────────────────────────────────────
   try {
-    const response = await fetch(
-      `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-        "prediction markets OR inflation OR crypto liquidity OR election odds",
-      )}&language=en&sortBy=publishedAt&pageSize=10`,
-      {
-        headers: { "X-Api-Key": apiKey },
-        next: { revalidate: 180 },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Signal API returned ${response.status}`);
+    const signals = await fetchGdeltSignals();
+    if (signals.length > 0) {
+      writeCache(signals, "GDELT");
+      return { status: "configured", signals, provider: "GDELT" };
     }
+    // GDELT returned empty — fall through to RSS
+  } catch {
+    // Network/timeout/parse error — fall through to RSS
+  }
 
-    const payload = (await response.json()) as { articles?: NewsApiArticle[] };
-    const signals: PublicSignal[] = (payload.articles ?? [])
-      .filter((article) => article.title)
-      .map((article, index) => ({
-        id: `newsapi-${index}-${article.publishedAt ?? Date.now()}`,
-        title: article.title ?? "Untitled signal",
-        source: article.source?.name ?? "News API",
-        sourceUrl: article.url,
-        timestamp: article.publishedAt ?? new Date().toISOString(),
-        confidence: 60 + ((index * 7) % 30),
-        category: "Public Signal",
-        summary: article.description ?? "Public signal loaded from configured news provider.",
-      }));
+  // ── 3. Try Google News RSS (fallback) ─────────────────────────────────────
+  try {
+    const signals = await fetchGoogleNewsRssSignals();
+    if (signals.length > 0) {
+      writeCache(signals, "Google News RSS");
+      return { status: "configured", signals, provider: "Google News RSS" };
+    }
+    // RSS returned empty — fall through to cache
+  } catch {
+    // Network/timeout/parse error — fall through to cache
+  }
 
-    return { status: "configured", signals, source: "News API" };
-  } catch (error) {
+  // ── 4. Use stale cache as last resort ─────────────────────────────────────
+  const stale = readCache();
+  if (stale && stale.signals.length > 0) {
     return {
-      status: "error",
-      message: "Unable to load public signals.",
-      detail: error instanceof Error ? error.message : String(error),
+      status: "configured",
+      signals: stale.signals.map((s) => ({ ...s, provider: "Cached" as const })),
+      provider: "Cached",
     };
   }
+
+  // ── 5. Everything failed, no cache — return clean error state ─────────────
+  return {
+    status: "error",
+    message: "Live signal providers unavailable. Try again later.",
+    detail: "GDELT and Google News RSS both failed to return signals.",
+  };
 }

@@ -1,5 +1,6 @@
 import { BigInt } from "@graphprotocol/graph-ts";
 import {
+  ExternalMarketImported,
   MarketCreated,
   MarketStatusUpdated,
 } from "../../generated/MarketRegistry/MarketRegistry";
@@ -15,16 +16,40 @@ const LIFECYCLE_STATES = ["ENTRY", "MONITORING", "RESOLUTION_CHECK", "SETTLED", 
 export function handleMarketCreated(event: MarketCreated): void {
   const market = new Market(event.params.marketId.toString());
   market.marketId = event.params.marketId;
+  market.externalMarketId = "";
+  market.platform = "Arc Testnet";
   market.question = event.params.question;
   market.category = event.params.category;
   market.resolutionSource = event.params.resolutionSource;
-  market.resolutionSourceHash = event.params.resolutionSourceHash;
   market.deadline = event.params.deadline;
   market.createdAt = event.block.timestamp;
   market.status = "OPEN";
   market.creator = event.params.creator;
   market.liquidityHint = event.params.liquidityHint;
+  market.impliedProbability = 0;
   market.marketType = event.params.marketType;
+  market.marketUrl = "";
+  market.metadataHash = event.transaction.hash;
+  market.save();
+}
+
+export function handleExternalMarketImported(event: ExternalMarketImported): void {
+  const market = new Market(event.params.marketId.toString());
+  market.marketId = event.params.marketId;
+  market.externalMarketId = event.params.externalMarketId;
+  market.platform = event.params.platform;
+  market.question = event.params.question;
+  market.category = event.params.category;
+  market.resolutionSource = event.params.resolutionSource;
+  market.deadline = event.params.deadline;
+  market.createdAt = event.block.timestamp;
+  market.status = "OPEN";
+  market.creator = event.params.creator;
+  market.liquidityHint = event.params.liquidityHint;
+  market.impliedProbability = event.params.impliedProbability;
+  market.marketType = event.params.marketType;
+  market.marketUrl = event.params.marketUrl;
+  market.metadataHash = event.params.metadataHash;
   market.save();
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { BarChart3, Layers, Shield, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BarChart3, ExternalLink, Layers, Shield, Zap } from "lucide-react";
+import { getAgentProfile } from "@/src/lib/agent-session";
 
 export function ExecutionView() {
   const params = useSearchParams();
@@ -21,8 +22,15 @@ export function ExecutionView() {
   const edgePct = (edgeBps / 100).toFixed(2);
   const suggestedUsdc = edgeBps > 0 ? (edgeBps / 100).toFixed(2) : "0.00";
 
+  const [agentId, setAgentId] = useState("agoralens-agent-v1");
+  useEffect(() => {
+    const profile = getAgentProfile();
+    if (profile?.agentId) setAgentId(profile.agentId);
+  }, []);
   const [deploying, setDeploying] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
 
   async function deployLiquidity() {
@@ -33,7 +41,7 @@ export function ExecutionView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agentId: "agoralens-agent-v1",
+          agentId,
           marketId,
           signalHash,
           reasoningHash,
@@ -45,9 +53,17 @@ export function ExecutionView() {
           decision,
         }),
       });
-      const body = await res.json() as { txHash?: string; error?: string; missing?: string[] };
+      const body = await res.json() as {
+        txHash?: string;
+        receiptId?: string | null;
+        explorerUrl?: string;
+        error?: string;
+        missing?: string[];
+      };
       if (!res.ok) throw new Error(body.error ?? "Receipt write failed");
       setTxHash(body.txHash ?? "submitted");
+      setReceiptId(body.receiptId ?? null);
+      setExplorerUrl(body.explorerUrl ?? null);
     } catch (e) {
       setDeployError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -60,7 +76,7 @@ export function ExecutionView() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">Execution</h1>
-        <p className="mt-1 text-sm text-zinc-400">Deploy liquidity via Arc gasless route</p>
+        <p className="mt-1 text-sm text-zinc-400">Write reasoning receipt to Arc Testnet (read-only · no funds moved)</p>
       </div>
 
       {!hasAuditData ? (
@@ -209,14 +225,34 @@ export function ExecutionView() {
             </div>
           </div>
 
-          {/* Deploy CTA */}
+          {/* Write Receipt CTA */}
           {txHash ? (
-            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-5 text-center">
-              <p className="font-bold text-emerald-400">✓ Receipt Written to Arc Testnet</p>
-              <p className="mt-1 font-mono text-xs text-zinc-400">TX: {txHash}</p>
-              <a href="/ledger" className="mt-4 inline-block rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-xs font-bold text-zinc-300 hover:bg-white/[0.08]">
-                View in Ledger →
-              </a>
+            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-5">
+              <p className="font-bold text-emerald-400">✓ Reasoning Receipt Written to Arc Testnet</p>
+              {receiptId && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  Receipt ID: <span className="font-mono text-zinc-300">{receiptId}</span>
+                </p>
+              )}
+              <p className="mt-1 font-mono text-xs text-zinc-400">TX: {txHash.slice(0, 24)}…</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {explorerUrl && (
+                  <a
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-400/20"
+                  >
+                    <ExternalLink size={12} /> View on Arc Explorer
+                  </a>
+                )}
+                <a
+                  href="/ledger"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-zinc-300 hover:bg-white/[0.08]"
+                >
+                  View in Ledger →
+                </a>
+              </div>
             </div>
           ) : (
             <button
@@ -224,9 +260,10 @@ export function ExecutionView() {
               disabled={deploying}
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-violet-600 py-4 text-base font-bold text-white shadow-[0_10px_30px_rgba(124,58,237,0.4)] transition hover:scale-[1.01] disabled:opacity-60"
             >
-              {deploying ? "Writing Receipt..." : "Deploy Liquidity"} <Zap size={18} />
+              {deploying ? "Writing Receipt to Arc Testnet…" : "Write Reasoning Receipt to Arc Testnet"} <Zap size={18} />
             </button>
           )}
+
 
           {deployError && (
             <p className="rounded-xl border border-rose-400/25 bg-rose-500/[0.06] px-4 py-3 text-xs text-rose-400">

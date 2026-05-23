@@ -19,6 +19,10 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function arcRpcUrl(): string {
+  return process.env.NEXT_PUBLIC_ARC_RPC_URL ?? process.env.ARC_RPC_URL ?? "";
+}
+
 // Only validate when running against the real network
 const isArcNetwork = process.argv.includes("arcTestnet");
 
@@ -58,8 +62,8 @@ export default defineConfig({
       // It contains a personal API key — NEVER use NEXT_PUBLIC_ prefix.
       // NEVER log, print, or expose this value.
       url: isArcNetwork
-        ? requireEnv("ARC_RPC_URL")
-        : (process.env.ARC_RPC_URL ?? ""),
+        ? (arcRpcUrl() || requireEnv("NEXT_PUBLIC_ARC_RPC_URL"))
+        : arcRpcUrl(),
 
       // Chain ID for Arc Testnet — validated by Hardhat against the RPC
       chainId: 5042002,

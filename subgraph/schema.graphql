@@ -1,16 +1,20 @@
 type Market @entity(immutable: false) {
   id: ID!
   marketId: BigInt!
+  externalMarketId: String!
+  platform: String!
   question: String!
   category: String!
   resolutionSource: String!
-  resolutionSourceHash: Bytes!
   deadline: BigInt!
   createdAt: BigInt!
   status: String!
   creator: Bytes!
   liquidityHint: BigInt!
+  impliedProbability: Int!
   marketType: String!
+  marketUrl: String!
+  metadataHash: Bytes!
 }
 
 type Receipt @entity(immutable: false) {

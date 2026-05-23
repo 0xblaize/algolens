@@ -1,7 +1,9 @@
 export const MARKET_REGISTRY_ABI = [
-  "function getMarkets() view returns ((uint256 marketId,string question,string category,string resolutionSource,bytes32 resolutionSourceHash,uint256 deadline,uint256 createdAt,uint8 status,address creator,uint256 liquidityHint,string marketType)[])",
-  "function getMarket(uint256 marketId) view returns (uint256 marketId,string question,string category,string resolutionSource,bytes32 resolutionSourceHash,uint256 deadline,uint256 createdAt,uint8 status,address creator,uint256 liquidityHint,string marketType)",
-  "event MarketCreated(uint256 indexed marketId,string question,string category,string resolutionSource,bytes32 indexed resolutionSourceHash,uint256 deadline,uint256 liquidityHint,string marketType,address indexed creator)",
+  "function getMarkets() view returns ((uint256 marketId,string externalMarketId,string platform,string question,string category,string resolutionSource,uint256 deadline,uint256 createdAt,uint8 status,address creator,uint256 liquidityHint,uint16 impliedProbability,string marketType,string marketUrl,bytes32 metadataHash)[])",
+  "function getMarket(uint256 marketId) view returns (uint256 marketId,string externalMarketId,string platform,string question,string category,string resolutionSource,uint256 deadline,uint256 createdAt,uint8 status,address creator,uint256 liquidityHint,uint16 impliedProbability,string marketType,string marketUrl,bytes32 metadataHash)",
+  "function importExternalMarket(string externalMarketId,string platform,string question,string category,string resolutionSource,uint256 deadline,uint256 liquidityHint,uint16 impliedProbability,string marketType,string marketUrl,bytes32 metadataHash) returns (uint256 marketId)",
+  "event MarketCreated(uint256 indexed marketId,string question,string category,string resolutionSource,uint256 deadline,uint256 liquidityHint,string marketType,address indexed creator)",
+  "event ExternalMarketImported(uint256 indexed marketId,string externalMarketId,string platform,string question,string category,string resolutionSource,uint256 deadline,uint256 liquidityHint,uint16 impliedProbability,string marketType,string marketUrl,bytes32 indexed metadataHash,address indexed creator)",
   "event MarketStatusUpdated(uint256 indexed marketId,uint8 status)",
 ] as const;
 

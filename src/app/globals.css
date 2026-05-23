@@ -27,3 +27,13 @@ button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Hide scrollbar while preserving scroll functionality */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+

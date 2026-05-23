@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Gavel, Landmark, Radar, Settings, UserCircle, Zap } from "lucide-react";
 import { getArcMarkets } from "@/src/lib/arc/market-registry";
 import { getArcReceipts } from "@/src/lib/arc/receipt-registry";
+import { getExternalMarkets } from "@/src/lib/markets";
 import { getPublicSignals } from "@/src/lib/signals";
 import { ExecutionView } from "@/src/features/execution/ExecutionView";
 import { LedgerView } from "@/src/features/ledger/LedgerView";
@@ -17,8 +18,9 @@ const tabs = [
 ];
 
 export async function DashboardShell() {
-  const [marketsState, signalsState, receiptsState] = await Promise.all([
+  const [arcMarketsState, externalMarketsState, signalsState, receiptsState] = await Promise.all([
     getArcMarkets(),
+    getExternalMarkets(),
     getPublicSignals(),
     getArcReceipts(),
   ]);
@@ -51,10 +53,15 @@ export async function DashboardShell() {
       </header>
 
       <div className="mx-auto max-w-[1440px] space-y-10 px-5 py-8 md:px-8 md:py-12">
-        <RadarView marketsState={marketsState} signalsState={signalsState} receiptCount={receiptCount} />
-        <MarketCourtView />
+        <RadarView
+          arcMarketsState={arcMarketsState}
+          externalMarketsState={externalMarketsState}
+          signalsState={signalsState}
+          receiptCount={receiptCount}
+        />
+        <MarketCourtView marketsState={arcMarketsState} signalsState={signalsState} />
         <ExecutionView />
-        <LedgerView receiptsState={receiptsState} />
+        <LedgerView receiptsState={receiptsState} marketsState={arcMarketsState} />
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/10 bg-[#15151d]/95 px-3 py-3 backdrop-blur-2xl md:hidden">

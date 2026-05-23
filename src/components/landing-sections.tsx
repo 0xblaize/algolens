@@ -16,16 +16,18 @@ import { courtAgents, flowSteps, problemCards, trustBadges } from "@/src/data/ma
 
 export function TrustBadges() {
   return (
-    <div className="flex flex-row flex-nowrap items-center gap-0 overflow-x-auto">
-      {trustBadges.map((badge, index) => (
-        <span key={badge} className="inline-flex items-center gap-2 text-[11px] font-semibold text-zinc-400 whitespace-nowrap">
-          {index > 0 && (
-            <span className="mx-4 h-3 w-px bg-white/15" />
-          )}
-          <span className="size-1.5 rounded-full bg-cyan-300" />
-          {badge}
-        </span>
-      ))}
+    <div className="w-full overflow-hidden">
+      <div className="flex flex-row flex-nowrap items-center gap-0 overflow-x-auto scrollbar-none">
+        {trustBadges.map((badge, index) => (
+          <span key={badge} className="inline-flex shrink-0 items-center gap-2 text-[11px] font-semibold text-zinc-400 whitespace-nowrap">
+            {index > 0 && (
+              <span className="mx-4 h-3 w-px bg-white/15" />
+            )}
+            <span className="size-1.5 rounded-full bg-cyan-300" />
+            {badge}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

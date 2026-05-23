@@ -118,6 +118,9 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
             <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-[11px] font-bold text-violet-300">
               MarketCourt v4.2
             </span>
+            <span className="rounded-full border border-fuchsia-400/25 bg-fuchsia-400/[0.07] px-3 py-1 text-[11px] font-bold text-fuchsia-300">
+              Gemini AI
+            </span>
             {audit && (
               <span className={`rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] font-bold ${decisionColor}`}>
                 {audit.decision}
@@ -288,7 +291,15 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
             {loading ? "Running Audit..." : audit ? "Re-run Audit" : "Run MarketCourt Audit"}
           </button>
 
-          {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
+          {error && (
+            <div className="mt-3 rounded-xl border border-rose-400/25 bg-rose-500/[0.06] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-rose-400 mb-1">Audit Error</p>
+              <p className="text-sm text-rose-300 leading-5">{error}</p>
+              <p className="mt-2 text-[10px] text-zinc-600">
+                Check GEMINI_API_KEY and GEMINI_MODEL in .env.local, then restart the dev server.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Bear */}
@@ -335,29 +346,32 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
             <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">Complete</span>
           </div>
 
-          <div className="mt-4 flex items-center gap-2">
-            {AUDIT_STEPS.map((s, i) => (
-              <div key={s.label} className="flex items-center gap-2 shrink-0">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex size-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-400/10 text-emerald-400">
-                    <CheckCircle2 size={14} />
+          {/* Scrollable on mobile — steps don't wrap, they scroll */}
+          <div className="-mx-1 overflow-x-auto px-1 pb-2">
+            <div className="flex min-w-max items-center gap-2">
+              {AUDIT_STEPS.map((s, i) => (
+                <div key={s.label} className="flex items-center gap-2">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex size-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-400/10 text-emerald-400">
+                      <CheckCircle2 size={14} />
+                    </div>
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-400 whitespace-nowrap">{s.label}</p>
                   </div>
-                  <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-400">{s.label}</p>
+                  {i < AUDIT_STEPS.length - 1 && <div className="mb-4 h-px w-8 bg-emerald-400/30" />}
                 </div>
-                {i < AUDIT_STEPS.length - 1 && <div className="mb-4 h-px w-8 bg-emerald-400/30" />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <button className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-xs font-bold text-zinc-300 transition hover:bg-white/[0.08] font-mono">
-              {audit.reasoningHash.slice(0, 18)}...
+            <button className="min-w-0 max-w-full truncate rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-bold text-zinc-300 transition hover:bg-white/[0.08] font-mono">
+              {audit.reasoningHash.slice(0, 14)}…
             </button>
             <Link
               href={`/execution?marketId=${selectedMarketId}&agentProb=${audit.agentProbability}&marketProb=${audit.marketProbability}&edgeBps=${audit.edgeBps}&integrity=${audit.integrityScore}&decision=${audit.decision}&reasoningHash=${audit.reasoningHash}&signalHash=${audit.signalHash}`}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-6 py-2.5 text-xs font-bold text-white shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition hover:scale-[1.01]"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-5 py-2.5 text-xs font-bold text-white shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition hover:scale-[1.01]"
             >
-              Finalize Verdict &amp; Proceed <ArrowRight size={13} />
+              Finalize &amp; Proceed <ArrowRight size={13} />
             </Link>
           </div>
         </div>

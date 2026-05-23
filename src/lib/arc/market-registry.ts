@@ -9,16 +9,20 @@ function normalizeMarket(raw: Record<string, unknown>): ArcMarket {
   const statusIndex = Number(raw.status ?? 0);
   return {
     marketId: String(raw.marketId ?? ""),
+    externalMarketId: String(raw.externalMarketId ?? ""),
+    platform: String(raw.platform ?? "Arc Testnet"),
     question: String(raw.question ?? ""),
     category: String(raw.category ?? ""),
     resolutionSource: String(raw.resolutionSource ?? ""),
-    resolutionSourceHash: String(raw.resolutionSourceHash ?? ""),
     deadline: String(raw.deadline ?? ""),
     createdAt: String(raw.createdAt ?? ""),
     status: MARKET_STATUSES[statusIndex] ?? "OPEN",
     creator: String(raw.creator ?? ""),
     liquidityHint: String(raw.liquidityHint ?? "0"),
+    impliedProbability: Number(raw.impliedProbability ?? 0),
     marketType: String(raw.marketType ?? ""),
+    marketUrl: String(raw.marketUrl ?? ""),
+    metadataHash: String(raw.metadataHash ?? ""),
     source: "rpc",
   };
 }

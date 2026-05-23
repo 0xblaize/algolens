@@ -33,16 +33,20 @@ export async function fetchMarketsFromSubgraph() {
     query AgoraLensMarkets {
       markets(orderBy: createdAt, orderDirection: desc, first: 50) {
         marketId
+        externalMarketId
+        platform
         question
         category
         resolutionSource
-        resolutionSourceHash
         deadline
         createdAt
         status
         creator
         liquidityHint
+        impliedProbability
         marketType
+        marketUrl
+        metadataHash
       }
     }
   `);

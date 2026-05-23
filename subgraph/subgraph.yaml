@@ -21,8 +21,10 @@ dataSources:
         - name: MarketRegistry
           file: ../artifacts/contracts/MarketRegistry.sol/MarketRegistry.json
       eventHandlers:
-        - event: MarketCreated(indexed uint256,string,string,string,indexed bytes32,uint256,uint256,string,indexed address)
+        - event: MarketCreated(indexed uint256,string,string,string,uint256,uint256,string,indexed address)
           handler: handleMarketCreated
+        - event: ExternalMarketImported(indexed uint256,string,string,string,string,string,uint256,uint256,uint16,string,string,indexed bytes32,indexed address)
+          handler: handleExternalMarketImported
         - event: MarketStatusUpdated(indexed uint256,uint8)
           handler: handleMarketStatusUpdated
       file: ./src/mappings.ts

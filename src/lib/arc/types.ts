@@ -2,16 +2,20 @@ export type ArcMarketStatus = "OPEN" | "PAUSED" | "RESOLVED" | "CANCELLED";
 
 export type ArcMarket = {
   marketId: string;
+  externalMarketId: string;
+  platform: string;
   question: string;
   category: string;
   resolutionSource: string;
-  resolutionSourceHash: string;
   deadline: string;
   createdAt: string;
   status: ArcMarketStatus;
   creator: string;
   liquidityHint: string;
+  impliedProbability: number;
   marketType: string;
+  marketUrl: string;
+  metadataHash: string;
   source: "subgraph" | "rpc";
 };
 

@@ -10,9 +10,12 @@
     "lint": "eslint",
     "contracts:compile": "hardhat compile",
     "contracts:deploy": "hardhat run scripts/deploy.ts --network arcTestnet",
-    "contracts:deploy:arc": "hardhat run scripts/deploy-arc-testnet.ts --network arcTestnet"
+    "contracts:deploy:arc": "hardhat run scripts/deploy-arc-testnet.ts --network arcTestnet",
+    "circle:register-entity-secret": "tsx scripts/circle-register-entity-secret.ts",
+    "circle:create-wallet-set": "tsx scripts/circle-create-wallet-set.ts"
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.3.1",
     "ethers": "^6.16.0",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
@@ -30,6 +33,7 @@
     "eslint-config-next": "16.2.6",
     "hardhat": "^3.5.1",
     "tailwindcss": "^4",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }
