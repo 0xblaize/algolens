@@ -52,6 +52,39 @@ AgoraLens audits before capital moves. It scans public signals, matches them to 
 - Circle Wallets is shown as not configured until credentials are provided.
 
 
+## Run Locally
+
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+## Install ARC CLI
+
+```bash
+uv tool install git+https://github.com/the-canteen-dev/ARC-cli
+arc --help
+arc-cli --help
+ARC-cli --help
+```
+
+## Compile and Deploy Contracts
+
+```bash
+npm run contracts:compile
+npm run contracts:deploy:arc
+```
+
+The deploy command prints:
+
+```bash
+NEXT_PUBLIC_MARKET_REGISTRY_ADDRESS=...
+NEXT_PUBLIC_RECEIPT_REGISTRY_ADDRESS=...
+```
+
+Add those addresses to `.env.local`.
+
 ## Test Flow
 
 1. Open `/create-agent`.
