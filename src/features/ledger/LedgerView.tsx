@@ -144,7 +144,7 @@ export function LedgerView({
                   { label: "Market URL", value: selectedMarket?.marketUrl ? shortValue(selectedMarket.marketUrl) : "Not indexed" },
                   { label: "Agent ID", value: selectedReceipt.agentId },
                   { label: "Reasoning Hash", value: selectedReceipt.reasoningHash.slice(0, 18) + "..." },
-                  { label: "Signal Hash", value: selectedReceipt.signalHash?.slice(0, 18) + "..." ?? "—" },
+                  { label: "Signal Hash", value: (selectedReceipt.signalHash?.slice(0, 18) ?? "—") + "..." },
                   { label: "Suggested USDC", value: `${selectedReceipt.suggestedUsdcAmount} USDC` },
                 ].map((row) => (
                   <div key={row.label}>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Gavel, Landmark, Radar, Settings, UserCircle, Zap } from "lucide-react";
+import { Gavel, Landmark, Radar, Settings, Zap } from "lucide-react";
 import { getArcMarkets } from "@/src/lib/arc/market-registry";
 import { getArcReceipts } from "@/src/lib/arc/receipt-registry";
 import { getExternalMarkets } from "@/src/lib/markets";
@@ -9,6 +9,7 @@ import { LedgerView } from "@/src/features/ledger/LedgerView";
 import { MarketCourtView } from "@/src/features/marketcourt/MarketCourtView";
 import { RadarView } from "@/src/features/radar/RadarView";
 import { BrandLogo } from "./brand-logo";
+import { AgentAccountPanel } from "./agent-account-panel";
 
 const tabs = [
   { label: "Radar", href: "#radar", icon: Radar },
@@ -42,12 +43,8 @@ export async function DashboardShell() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/create-agent" className="hidden text-right text-sm text-zinc-300 sm:block">
-              Launch Agent
-              <span className="block text-xs text-violet-300">Arc Testnet</span>
-            </Link>
+            <AgentAccountPanel />
             <Settings className="text-zinc-300" />
-            <UserCircle className="text-zinc-200" size={34} />
           </div>
         </div>
       </header>

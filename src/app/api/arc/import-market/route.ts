@@ -81,14 +81,14 @@ export async function POST(request: Request) {
     const receipt = await tx.wait();
 
     const parsed = receipt?.logs
-      ?.map((log) => {
+      ?.map((log: any) => {
         try {
           return contract.interface.parseLog(log);
         } catch {
           return null;
         }
       })
-      .find((event) => event?.name === "ExternalMarketImported");
+      .find((event: any) => event?.name === "ExternalMarketImported");
 
     return NextResponse.json({
       marketId: parsed?.args?.marketId?.toString() ?? null,
