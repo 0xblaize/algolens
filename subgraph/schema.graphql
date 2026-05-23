@@ -1,0 +1,32 @@
+type Market @entity(immutable: false) {
+  id: ID!
+  marketId: BigInt!
+  question: String!
+  category: String!
+  resolutionSource: String!
+  resolutionSourceHash: Bytes!
+  deadline: BigInt!
+  createdAt: BigInt!
+  status: String!
+  creator: Bytes!
+  liquidityHint: BigInt!
+  marketType: String!
+}
+
+type Receipt @entity(immutable: false) {
+  id: ID!
+  receiptId: BigInt!
+  agentId: String!
+  marketId: BigInt!
+  signalHash: Bytes!
+  reasoningHash: Bytes!
+  integrityScore: Int!
+  agentProbability: Int!
+  marketProbability: Int!
+  edgeBps: BigInt!
+  suggestedUsdcAmount: BigInt!
+  decision: String!
+  lifecycleState: String!
+  timestamp: BigInt!
+  txHash: Bytes!
+}

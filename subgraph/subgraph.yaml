@@ -1,0 +1,50 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: MarketRegistry
+    network: arc-testnet
+    source:
+      address: "${NEXT_PUBLIC_MARKET_REGISTRY_ADDRESS}"
+      abi: MarketRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+      abis:
+        - name: MarketRegistry
+          file: ../artifacts/contracts/MarketRegistry.sol/MarketRegistry.json
+      eventHandlers:
+        - event: MarketCreated(indexed uint256,string,string,string,indexed bytes32,uint256,uint256,string,indexed address)
+          handler: handleMarketCreated
+        - event: MarketStatusUpdated(indexed uint256,uint8)
+          handler: handleMarketStatusUpdated
+      file: ./src/mappings.ts
+  - kind: ethereum
+    name: ReasoningReceiptRegistry
+    network: arc-testnet
+    source:
+      address: "${NEXT_PUBLIC_RECEIPT_REGISTRY_ADDRESS}"
+      abi: ReasoningReceiptRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Receipt
+      abis:
+        - name: ReasoningReceiptRegistry
+          file: ../artifacts/contracts/ReasoningReceiptRegistry.sol/ReasoningReceiptRegistry.json
+      eventHandlers:
+        - event: ReceiptWritten(indexed uint256,string,indexed uint256,indexed bytes32,uint16,string)
+          handler: handleReceiptWritten
+        - event: LifecycleUpdated(indexed uint256,uint8)
+          handler: handleLifecycleUpdated
+      file: ./src/mappings.ts
