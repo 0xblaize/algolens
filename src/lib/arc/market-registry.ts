@@ -7,21 +7,24 @@ const MARKET_STATUSES: ArcMarketStatus[] = ["OPEN", "PAUSED", "RESOLVED", "CANCE
 
 function normalizeMarket(raw: Record<string, unknown>): ArcMarket {
   const statusIndex = Number(raw.status ?? 0);
+  const auditTargetId = String(raw.auditTargetId ?? raw.marketId ?? "");
+  const title = String(raw.title ?? raw.question ?? "");
+  const sourceUrl = String(raw.sourceUrl ?? raw.marketUrl ?? "");
   return {
-    marketId: String(raw.marketId ?? ""),
-    externalMarketId: String(raw.externalMarketId ?? ""),
-    platform: String(raw.platform ?? "Arc Testnet"),
-    question: String(raw.question ?? ""),
+    marketId: auditTargetId,
+    externalMarketId: auditTargetId,
+    platform: "Arc Testnet",
+    question: title,
     category: String(raw.category ?? ""),
-    resolutionSource: String(raw.resolutionSource ?? ""),
+    resolutionSource: sourceUrl,
     deadline: String(raw.deadline ?? ""),
     createdAt: String(raw.createdAt ?? ""),
     status: MARKET_STATUSES[statusIndex] ?? "OPEN",
     creator: String(raw.creator ?? ""),
-    liquidityHint: String(raw.liquidityHint ?? "0"),
-    impliedProbability: Number(raw.impliedProbability ?? 0),
-    marketType: String(raw.marketType ?? ""),
-    marketUrl: String(raw.marketUrl ?? ""),
+    liquidityHint: "0",
+    impliedProbability: 0,
+    marketType: "Audit Target",
+    marketUrl: sourceUrl,
     metadataHash: String(raw.metadataHash ?? ""),
     source: "rpc",
   };
@@ -59,7 +62,7 @@ export async function getArcMarkets(): Promise<ArcDataState<ArcMarket[]>> {
       };
     }
 
-    const rawMarkets = (await contract.getMarkets()) as Record<string, unknown>[];
+    const rawMarkets = (await contract.getAuditTargets()) as Record<string, unknown>[];
     const markets = rawMarkets.map(normalizeMarket);
     if (markets.length === 0) {
       return {

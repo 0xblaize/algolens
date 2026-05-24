@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Gavel, Landmark, Radar, Settings, Zap } from "lucide-react";
 import { getArcMarkets } from "@/src/lib/arc/market-registry";
 import { getArcReceipts } from "@/src/lib/arc/receipt-registry";
+import { getSafeArcStatus } from "@/src/lib/arc/config";
 import { getExternalMarkets } from "@/src/lib/markets";
 import { getPublicSignals } from "@/src/lib/signals";
 import { ExecutionView } from "@/src/features/execution/ExecutionView";
@@ -26,6 +27,7 @@ export async function DashboardShell() {
     getArcReceipts(),
   ]);
   const receiptCount = receiptsState.status === "configured" ? receiptsState.data.length : 0;
+  const arcStatus = getSafeArcStatus();
 
   return (
     <main className="min-h-screen bg-[#15151d] pb-24 text-white md:pb-0">
@@ -55,6 +57,7 @@ export async function DashboardShell() {
           externalMarketsState={externalMarketsState}
           signalsState={signalsState}
           receiptCount={receiptCount}
+          arcStatus={arcStatus}
         />
         <MarketCourtView marketsState={arcMarketsState} signalsState={signalsState} />
         <ExecutionView />

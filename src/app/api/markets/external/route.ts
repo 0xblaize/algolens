@@ -11,8 +11,10 @@ import { getExternalMarkets } from "@/src/lib/markets";
  */
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const state = await getExternalMarkets();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const parsedLimit = Number(searchParams.get("limit") ?? 30);
+  const state = await getExternalMarkets(Number.isFinite(parsedLimit) ? parsedLimit : 30);
 
   if (state.status === "error") {
     return NextResponse.json(

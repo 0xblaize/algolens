@@ -12,6 +12,7 @@
  */
 
 import { keccak256, toUtf8Bytes } from "ethers";
+import { classifyDeadline } from "./deadline";
 import type { ExternalMarket, ExternalMarketState } from "./types";
 
 const GAMMA_BASE = "https://gamma-api.polymarket.com";
@@ -58,24 +59,25 @@ type PolymarketRawMarket = {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export async function getPolymarketMarkets(): Promise<ExternalMarketState> {
+export async function getPolymarketMarkets(limit = 30): Promise<ExternalMarketState> {
+  const requestedLimit = Math.max(1, Math.min(limit, 100));
   // Try events endpoint first (better UX — groups outcomes, cleaner questions)
-  const eventsResult = await tryGetFromEvents();
+  const eventsResult = await tryGetFromEvents(requestedLimit);
   if (eventsResult !== null) return eventsResult;
 
   // Fall back to individual markets endpoint
-  return tryGetFromMarkets();
+  return tryGetFromMarkets(requestedLimit);
 }
 
 // ── Events endpoint ───────────────────────────────────────────────────────────
 
-async function tryGetFromEvents(): Promise<ExternalMarketState | null> {
+async function tryGetFromEvents(limit: number): Promise<ExternalMarketState | null> {
   try {
     const url = new URL(`${GAMMA_BASE}/events`);
     url.searchParams.set("active", "true");
     url.searchParams.set("closed", "false");
     url.searchParams.set("archived", "false");
-    url.searchParams.set("limit", "50"); // fetch more to guarantee minimum 10 after filtering
+    url.searchParams.set("limit", String(Math.max(50, limit * 3)));
     url.searchParams.set("order", "startDate");
     url.searchParams.set("ascending", "false"); // newest first
 
@@ -151,12 +153,14 @@ async function tryGetFromEvents(): Promise<ExternalMarketState | null> {
         metadataHash,
       });
 
-      if (markets.length >= 20) break; // show up to 20, but keep fetching to ensure minimum 10
     }
 
-    if (markets.length < 10) return null; // fall through to markets endpoint if we have fewer than 10
+    if (markets.length === 0) return null;
 
-    return { status: "configured", source: "Polymarket", markets };
+    const prioritized = prioritizeImportableMarkets(markets, limit);
+    if (!prioritized.some(isImportableMarket)) return null;
+
+    return { status: "configured", source: "Polymarket", markets: prioritized };
   } catch {
     return null; // fall through to markets endpoint
   }
@@ -164,13 +168,13 @@ async function tryGetFromEvents(): Promise<ExternalMarketState | null> {
 
 // ── Markets endpoint (fallback) ───────────────────────────────────────────────
 
-async function tryGetFromMarkets(): Promise<ExternalMarketState> {
+async function tryGetFromMarkets(limit: number): Promise<ExternalMarketState> {
   try {
     const url = new URL(`${GAMMA_BASE}/markets`);
     url.searchParams.set("active", "true");
     url.searchParams.set("closed", "false");
     url.searchParams.set("archived", "false");
-    url.searchParams.set("limit", "100"); // fetch more to guarantee minimum 10 available
+    url.searchParams.set("limit", String(Math.max(100, limit * 3)));
     url.searchParams.set("order", "startDate"); // newest markets first
     url.searchParams.set("ascending", "false");
 
@@ -195,16 +199,15 @@ async function tryGetFromMarkets(): Promise<ExternalMarketState> {
         ? (payload as { markets: unknown[] }).markets
         : [];
 
-    const markets = (rawMarkets as PolymarketRawMarket[])
+    const markets = prioritizeImportableMarkets((rawMarkets as PolymarketRawMarket[])
       .map(normalizePolymarketMarket)
-      .filter((m): m is ExternalMarket => Boolean(m))
-      .slice(0, 20);
+      .filter((m): m is ExternalMarket => Boolean(m)), limit);
 
-    if (markets.length < 10) {
+    if (markets.length === 0) {
       return {
         status: "empty",
         source: "Polymarket",
-        message: `Only ${markets.length} open Polymarket markets available. At least 10 markets needed for the Radar.`,
+        message: "No open Polymarket markets were returned.",
       };
     }
 
@@ -303,4 +306,23 @@ function getImpliedProbability(outcomes: unknown, prices: unknown): number {
   const yesIndex = parsedOutcomes.findIndex((o) => o.toLowerCase() === "yes");
   const selectedPrice = parsedPrices[yesIndex >= 0 ? yesIndex : 0] ?? parsedPrices[0] ?? 0;
   return Math.round(Math.max(0, Math.min(1, selectedPrice)) * 100);
+}
+
+function prioritizeImportableMarkets(markets: ExternalMarket[], limit: number): ExternalMarket[] {
+  const now = Math.floor(Date.now() / 1000);
+
+  return [...markets]
+    .sort((a, b) => {
+      const aImportable = classifyDeadline(a.deadline, now).importable ? 1 : 0;
+      const bImportable = classifyDeadline(b.deadline, now).importable ? 1 : 0;
+      if (bImportable !== aImportable) return bImportable - aImportable;
+      if (b.liquidity !== a.liquidity) return b.liquidity - a.liquidity;
+      if (b.volume !== a.volume) return b.volume - a.volume;
+      return Number(b.deadline) - Number(a.deadline);
+    })
+    .slice(0, limit);
+}
+
+function isImportableMarket(market: ExternalMarket): boolean {
+  return classifyDeadline(market.deadline).importable;
 }

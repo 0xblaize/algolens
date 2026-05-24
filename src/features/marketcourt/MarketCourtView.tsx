@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Gavel, Scale } from "lucide-react";
 import type { ArcDataState, ArcMarket } from "@/src/lib/arc/types";
+import { classifyDeadline } from "@/src/lib/markets/deadline";
 import type { SignalDataState, PublicSignal } from "@/src/lib/signals/types";
 
 type AuditResult = {
@@ -32,7 +33,7 @@ const AUDIT_STEPS = [
   { label: "Bull Analysis" },
   { label: "Bear Rebuttal" },
   { label: "Judge Synthesis" },
-  { label: "Final Execution" },
+  { label: "Final Receipt" },
 ];
 
 export function MarketCourtView({ marketsState, signalsState, preselectedMarketId, preselectedSignalId }: Props) {
@@ -48,6 +49,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
 
   const selectedMarket = markets.find((m) => m.marketId === selectedMarketId) ?? markets[0] ?? null;
   const selectedSignal: PublicSignal | undefined = signals.find((s) => s.id === selectedSignalId) ?? signals[0];
+  const deadlineRisk = selectedMarket ? classifyDeadline(selectedMarket.deadline) : null;
 
   // Animate steps while loading
   useEffect(() => {
@@ -126,6 +128,11 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
                 {audit.decision}
               </span>
             )}
+            {deadlineRisk && deadlineRisk.kind === "short-horizon" && (
+              <span className="rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1 text-[11px] font-bold text-amber-200">
+                Short Horizon Audit
+              </span>
+            )}
           </div>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">MarketCourt</h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-zinc-400">
@@ -202,6 +209,39 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
           )}
         </div>
       </div>
+
+      {deadlineRisk && (
+        <div className={`rounded-2xl border p-4 ${
+          deadlineRisk.kind === "short-horizon"
+            ? "border-amber-400/20 bg-amber-500/[0.06]"
+            : "border-white/[0.07] bg-white/[0.02]"
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Deadline Risk</p>
+            <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+              deadlineRisk.kind === "short-horizon"
+                ? "bg-amber-400/10 text-amber-200"
+                : "bg-emerald-400/10 text-emerald-300"
+            }`}>
+              {deadlineRisk.auditLabel}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-zinc-400">
+            {deadlineRisk.kind === "short-horizon"
+              ? "Fast expiry is included in Bear Agent risk analysis and weighed by Judge Agent as an audit risk, not an automatic rejection."
+              : "Standard lifecycle window available for monitoring and receipt review."}
+          </p>
+          {deadlineRisk.warnings.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {deadlineRisk.warnings.map((warning) => (
+                <span key={warning} className="rounded-full bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-200">
+                  {warning}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Three-column agent grid */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -368,7 +408,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
               {audit.reasoningHash.slice(0, 14)}…
             </button>
             <Link
-              href={`/execution?marketId=${selectedMarketId}&agentProb=${audit.agentProbability}&marketProb=${audit.marketProbability}&edgeBps=${audit.edgeBps}&integrity=${audit.integrityScore}&decision=${audit.decision}&reasoningHash=${audit.reasoningHash}&signalHash=${audit.signalHash}`}
+              href={`/execution?marketId=${selectedMarketId}&agentProb=${audit.agentProbability}&marketProb=${audit.marketProbability}&edgeBps=${audit.edgeBps}&integrity=${audit.integrityScore}&decision=${audit.decision}&reasoningHash=${audit.reasoningHash}&signalHash=${audit.signalHash}&routeMode=${encodeURIComponent(deadlineRisk?.routeMode ?? "Standard Testnet Receipt")}&auditLabel=${encodeURIComponent(deadlineRisk?.auditLabel ?? "Standard Lifecycle Audit")}`}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-5 py-2.5 text-xs font-bold text-white shadow-[0_6px_20px_rgba(124,58,237,0.35)] transition hover:scale-[1.01]"
             >
               Finalize &amp; Proceed <ArrowRight size={13} />

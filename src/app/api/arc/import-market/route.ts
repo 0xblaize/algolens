@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
-import { Contract, Wallet, getAddress } from "ethers";
+import { Contract, Wallet, getAddress, keccak256, toUtf8Bytes } from "ethers";
 import { MARKET_REGISTRY_ABI } from "@/src/lib/arc/abis";
 import { getArcConfig, getMissingArcMarketConfig } from "@/src/lib/arc/config";
 import { getArcProvider } from "@/src/lib/arc/contracts";
-
-/**
- * POST /api/arc/import-market
- *
- * Imports an external prediction market into the on-chain MarketRegistry.
- * Testnet only. No real funds. No trades. No orders.
- */
+import { classifyDeadline } from "@/src/lib/markets/deadline";
 
 type ImportMarketRequest = {
   externalMarketId?: string;
@@ -18,8 +12,6 @@ type ImportMarketRequest = {
   category?: string;
   resolutionSource?: string;
   deadline?: string;
-  impliedProbability?: number;
-  liquidity?: number;
   marketUrl?: string;
   metadataHash?: string;
 };
@@ -29,10 +21,10 @@ type ReceiptLog = {
   data: string;
 };
 
-const TX_WAIT_TIMEOUT_MS = 60_000; // 60-second max for tx confirmation
+const ARC_TESTNET_CHAIN_ID = 5_042_002n;
+const TX_WAIT_TIMEOUT_MS = 60_000;
 
 export async function POST(request: Request) {
-  // ── 1. Validate request body ──────────────────────────────────────────────
   let body: ImportMarketRequest;
   try {
     body = (await request.json()) as ImportMarketRequest;
@@ -40,30 +32,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const missingFields = [
-    "externalMarketId",
-    "platform",
-    "question",
-    "category",
-    "resolutionSource",
-    "deadline",
-    "marketUrl",
-    "metadataHash",
-  ].filter((field) => !body[field as keyof ImportMarketRequest]);
-
+  const missingFields = ["question", "category", "deadline", "marketUrl", "metadataHash"].filter(
+    (field) => !body[field as keyof ImportMarketRequest],
+  );
   if (missingFields.length) {
     return NextResponse.json(
-      { error: `Missing market metadata: ${missingFields.join(", ")}` },
+      { error: `Missing audit target metadata: ${missingFields.join(", ")}` },
       { status: 400 },
     );
   }
 
-  // ── 2. Validate Arc testnet config ────────────────────────────────────────
+  const deadline = validateDeadline(body.deadline);
+  if (!deadline.ok) {
+    return NextResponse.json(
+      {
+        error: deadline.detail,
+        detail: deadline.detail,
+      },
+      { status: 400 },
+    );
+  }
+
   const missingConfig = getMissingArcMarketConfig();
   if (missingConfig.length || !process.env.ARC_PRIVATE_KEY_TESTNET) {
     return NextResponse.json(
       {
-        error: "Arc testnet import is not configured.",
+        error: "Arc testnet audit target creation is not configured.",
         missing: [
           ...missingConfig,
           ...(process.env.ARC_PRIVATE_KEY_TESTNET ? [] : ["ARC_PRIVATE_KEY_TESTNET"]),
@@ -77,63 +71,90 @@ export async function POST(request: Request) {
   const provider = getArcProvider();
   if (!provider || !marketRegistryAddress) {
     return NextResponse.json(
-      { error: "Arc testnet provider or MarketRegistry address is unavailable." },
+      { error: "Arc testnet provider or MarketAuditRegistry address is unavailable." },
       { status: 400 },
     );
   }
 
-  // ── 3. Pre-flight: check wallet balance ───────────────────────────────────
-  let walletAddress = "(unknown)";
+  const registryAddress = getAddress(marketRegistryAddress);
+  const network = await provider.getNetwork();
+  if (network.chainId !== ARC_TESTNET_CHAIN_ID) {
+    return NextResponse.json(
+      {
+        error: "Arc testnet import is connected to the wrong chain.",
+        detail: `Expected chainId ${ARC_TESTNET_CHAIN_ID.toString()}, received ${network.chainId.toString()}.`,
+      },
+      { status: 400 },
+    );
+  }
+
+  const code = await provider.getCode(registryAddress);
+  if (!code || code === "0x") {
+    return NextResponse.json(
+      {
+        error: "MarketAuditRegistry address has no deployed contract code.",
+        detail: `No bytecode found at ${registryAddress} on Arc testnet.`,
+      },
+      { status: 400 },
+    );
+  }
+
   try {
     const signer = new Wallet(process.env.ARC_PRIVATE_KEY_TESTNET, provider);
-    walletAddress = signer.address;
     const balance = await provider.getBalance(signer.address);
-
     if (balance === 0n) {
       return NextResponse.json(
-        {
-          error: "Arc testnet wallet has zero balance — cannot submit transaction.",
-          detail: `Wallet ${signer.address} needs testnet funds. Visit the Arc testnet faucet to fund it.`,
-          walletAddress: signer.address,
-        },
+        { error: `Arc testnet wallet (${signer.address}) has insufficient funds for gas.` },
         { status: 402 },
       );
     }
-  } catch (balanceError) {
-    // Non-fatal: log and continue — balance check is best-effort
-    console.warn("[import-market] Balance check failed:", balanceError);
-  }
 
-  // ── 4. Submit transaction ─────────────────────────────────────────────────
-  try {
-    const signer = new Wallet(process.env.ARC_PRIVATE_KEY_TESTNET, provider);
-    const contract = new Contract(
-      getAddress(marketRegistryAddress),
-      MARKET_REGISTRY_ABI,
-      signer,
-    );
+    const contract = new Contract(registryAddress, MARKET_REGISTRY_ABI, signer);
+    const sourceUrl = body.marketUrl as string;
+    const sourceHash = keccak256(toUtf8Bytes(`${body.platform ?? "Polymarket"}:${body.externalMarketId ?? sourceUrl}`));
+    const args = [
+      body.question as string,
+      body.category as string,
+      sourceUrl,
+      sourceHash,
+      BigInt(deadline.value),
+      body.metadataHash as string,
+    ] as const;
 
-    // Encode metadataHash: keccak256 output is already a 0x-prefixed 32-byte hex
-    const metadataHash = body.metadataHash as string;
+    const calldata = contract.interface.encodeFunctionData("createAuditTarget", args);
+    if (!calldata || calldata === "0x") {
+      return NextResponse.json(
+        {
+          error: "Import route is not calling the MarketAuditRegistry function correctly.",
+          detail: "Encoded calldata for createAuditTarget is empty.",
+        },
+        { status: 500 },
+      );
+    }
 
-    const tx = await contract.importExternalMarket(
-      body.externalMarketId,
-      body.platform,
-      body.question,
-      body.category,
-      body.resolutionSource,
-      BigInt(body.deadline ?? "0"),
-      BigInt(Math.max(0, Math.round(body.liquidity ?? 0))),
-      Math.max(0, Math.min(100, Math.round(body.impliedProbability ?? 0))),
-      "External Prediction Market",
-      body.marketUrl,
-      metadataHash,
-      // Override gasLimit to bypass Arc testnet's broken eth_estimateGas
-      // (the node returns null revert data which makes estimateGas throw before the tx is sent)
-      { gasLimit: 500_000 },
-    );
+    try {
+      await contract.createAuditTarget.staticCall(...args);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: getStaticCallUserMessage(error),
+          detail: getErrorMessage(error),
+        },
+        { status: 400 },
+      );
+    }
 
-    // Wait with timeout so the route doesn't hang indefinitely
+    const tx = await contract.createAuditTarget(...args, { gasLimit: 500_000 });
+    if (!tx.data || tx.data === "0x") {
+      return NextResponse.json(
+        {
+          error: "Import route is not calling the MarketAuditRegistry function correctly.",
+          detail: "Transaction calldata is empty before submission.",
+        },
+        { status: 500 },
+      );
+    }
+
     const receipt = await Promise.race([
       tx.wait(),
       new Promise<null>((_, reject) =>
@@ -143,58 +164,80 @@ export async function POST(request: Request) {
 
     const logs = (receipt as { logs?: ReceiptLog[] } | null)?.logs ?? [];
     const parsedEvent = logs
-      .map((log: ReceiptLog) => {
+      .map((log) => {
         try {
           return contract.interface.parseLog(log);
         } catch {
           return null;
         }
       })
-      .find((event) => event?.name === "ExternalMarketImported");
+      .find((event) => event?.name === "AuditTargetCreated");
 
-    const marketId = parsedEvent?.args?.marketId?.toString() ?? null;
+    const auditTargetId = parsedEvent?.args?.auditTargetId?.toString() ?? null;
     const txHash = (receipt as { hash?: string } | null)?.hash ?? tx.hash;
 
-    if (!marketId) {
-      // Tx succeeded but event not found — return txHash so user can verify manually
-      return NextResponse.json({
-        marketId: null,
-        txHash,
-        status: "submitted",
-        warning: "Transaction submitted but ExternalMarketImported event not found in receipt. Check the explorer.",
-      });
-    }
-
     return NextResponse.json({
-      marketId,
+      marketId: auditTargetId,
+      auditTargetId,
       txHash,
-      status: "imported",
+      status: auditTargetId ? "created" : "submitted",
+      mode: "testnet-audit-target-only",
+      routeMode: deadline.classification.routeMode,
+      auditLabel: deadline.classification.auditLabel,
+      warnings: deadline.classification.warnings,
+      calldataBytes: (tx.data.length - 2) / 2,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = getErrorMessage(error);
+    const userMessage = /DEADLINE_IN_PAST/i.test(detail)
+      ? "Market already expired."
+      : /data=""|data: ""|data="0x"|data: "0x"/i.test(detail)
+        ? "Import route is not calling the MarketAuditRegistry function correctly."
+        : /insufficient funds|out of gas|gas required/i.test(detail)
+          ? "Arc testnet wallet has insufficient funds for gas."
+          : /network|fetch|ECONNREFUSED|timeout|could not detect/i.test(detail)
+            ? "Could not connect to Arc testnet RPC. Check ARC_RPC_URL or try again."
+            : /revert|execution reverted|CALL_EXCEPTION/i.test(detail)
+              ? "Transaction reverted on Arc testnet. The audit registry rejected this target."
+              : "Could not create audit target on Arc testnet.";
 
-    // Try to extract revert reason from raw data field
-    const revertData = (error as { data?: string })?.data ?? "";
-    const isDeadline = /DEADLINE_IN_PAST/i.test(detail) || /DEADLINE_IN_PAST/i.test(revertData);
-    const isGas = /insufficient funds|out of gas|gas required/i.test(detail);
-    const isRpc = /network|fetch|ECONNREFUSED|timeout|could not detect/i.test(detail);
-    const isRevert = /revert|execution reverted|CALL_EXCEPTION/i.test(detail);
+    return NextResponse.json({ error: userMessage, detail }, { status: 500 });
+  }
+}
 
-    const userMessage = isDeadline
-      ? "Market deadline is in the past according to Arc testnet block time. Choose a market that expires further in the future."
-      : isGas
-        ? `Arc testnet wallet (${walletAddress}) has insufficient funds for gas.`
-        : isRpc
-          ? "Could not connect to Arc testnet RPC. Check ARC_RPC_URL or try again."
-          : isRevert
-            ? "Transaction reverted on Arc testnet. The contract rejected this market — likely DEADLINE_IN_PAST. Try a market expiring 7+ days from now."
-            : "Could not import external market to Arc testnet.";
+function validateDeadline(value: string | undefined):
+  | { ok: true; value: number; classification: ReturnType<typeof classifyDeadline> }
+  | { ok: false; detail: string } {
+  const deadline = Number(value);
+  const classification = classifyDeadline(value);
+  if (classification.kind === "invalid") {
+    return { ok: false, detail: "Deadline is missing or invalid." };
+  }
+  if (!classification.importable) {
+    return { ok: false, detail: classification.blockReason };
+  }
+  return { ok: true, value: deadline, classification };
+}
 
-    console.error("[import-market] Error:", detail);
+function getStaticCallUserMessage(error: unknown): string {
+  const detail = getErrorMessage(error);
+  if (/DEADLINE_IN_PAST/i.test(detail)) {
+    return "Market already expired.";
+  }
+  if (/TITLE_REQUIRED|SOURCE_URL_REQUIRED|SOURCE_HASH_REQUIRED|METADATA_HASH_REQUIRED/i.test(detail)) {
+    return "Audit target metadata is incomplete and cannot be written to Arc testnet.";
+  }
+  if (/missing revert data|could not decode result data|function returned an unexpected amount of data/i.test(detail)) {
+    return "MarketAuditRegistry ABI does not match deployed contract.";
+  }
+  return "MarketAuditRegistry rejected this audit target during preflight static call.";
+}
 
-    return NextResponse.json(
-      { error: userMessage, detail },
-      { status: 500 },
-    );
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
   }
 }

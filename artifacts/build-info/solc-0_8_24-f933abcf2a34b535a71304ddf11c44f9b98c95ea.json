@@ -1,0 +1,51 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_24-f933abcf2a34b535a71304ddf11c44f9b98c95ea",
+  "solcVersion": "0.8.24",
+  "solcLongVersion": "0.8.24+commit.e11b9ed9",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/MarketAuditRegistry.sol": "project/contracts/MarketAuditRegistry.sol",
+    "contracts/ReasoningReceiptRegistry.sol": "project/contracts/ReasoningReceiptRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "project/contracts/MarketAuditRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n\ncontract MarketAuditRegistry {\n    enum AuditTargetStatus {\n        OPEN,\n        PAUSED,\n        RESOLVED,\n        CANCELLED\n    }\n\n    struct AuditTarget {\n        uint256 auditTargetId;\n        string title;\n        string category;\n        string sourceUrl;\n        bytes32 sourceHash;\n        uint256 deadline;\n        uint256 createdAt;\n        AuditTargetStatus status;\n        address creator;\n        bytes32 metadataHash;\n    }\n\n    uint256 private nextAuditTargetId = 1;\n    uint256[] private auditTargetIds;\n    mapping(uint256 => AuditTarget) private auditTargets;\n\n    event AuditTargetCreated(\n        uint256 indexed auditTargetId,\n        string title,\n        string category,\n        string sourceUrl,\n        bytes32 indexed sourceHash,\n        uint256 deadline,\n        bytes32 indexed metadataHash,\n        address creator\n    );\n\n    event AuditTargetStatusUpdated(uint256 indexed auditTargetId, AuditTargetStatus status);\n\n    function createAuditTarget(\n        string calldata title,\n        string calldata category,\n        string calldata sourceUrl,\n        bytes32 sourceHash,\n        uint256 deadline,\n        bytes32 metadataHash\n    ) external returns (uint256 auditTargetId) {\n        require(bytes(title).length > 0, \"TITLE_REQUIRED\");\n        require(bytes(sourceUrl).length > 0, \"SOURCE_URL_REQUIRED\");\n        require(sourceHash != bytes32(0), \"SOURCE_HASH_REQUIRED\");\n        require(metadataHash != bytes32(0), \"METADATA_HASH_REQUIRED\");\n        require(deadline > block.timestamp, \"DEADLINE_IN_PAST\");\n\n        auditTargetId = nextAuditTargetId++;\n        auditTargets[auditTargetId] = AuditTarget({\n            auditTargetId: auditTargetId,\n            title: title,\n            category: category,\n            sourceUrl: sourceUrl,\n            sourceHash: sourceHash,\n            deadline: deadline,\n            createdAt: block.timestamp,\n            status: AuditTargetStatus.OPEN,\n            creator: msg.sender,\n            metadataHash: metadataHash\n        });\n        auditTargetIds.push(auditTargetId);\n\n        emit AuditTargetCreated(\n            auditTargetId,\n            title,\n            category,\n            sourceUrl,\n            sourceHash,\n            deadline,\n            metadataHash,\n            msg.sender\n        );\n    }\n\n    function updateAuditTargetStatus(uint256 auditTargetId, AuditTargetStatus status) external {\n        AuditTarget storage target = auditTargets[auditTargetId];\n        require(target.creator != address(0), \"AUDIT_TARGET_NOT_FOUND\");\n        require(msg.sender == target.creator, \"ONLY_CREATOR\");\n\n        target.status = status;\n        emit AuditTargetStatusUpdated(auditTargetId, status);\n    }\n\n    function getAuditTarget(uint256 auditTargetId) external view returns (AuditTarget memory) {\n        AuditTarget memory target = auditTargets[auditTargetId];\n        require(target.creator != address(0), \"AUDIT_TARGET_NOT_FOUND\");\n        return target;\n    }\n\n    function getAuditTargets() external view returns (AuditTarget[] memory results) {\n        results = new AuditTarget[](auditTargetIds.length);\n        for (uint256 i = 0; i < auditTargetIds.length; i++) {\n            results[i] = auditTargets[auditTargetIds[i]];\n        }\n    }\n}\n"
+      },
+      "project/contracts/ReasoningReceiptRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.24;\r\n\r\ncontract ReasoningReceiptRegistry {\r\n    enum LifecycleState {\r\n        ENTRY,\r\n        MONITORING,\r\n        RESOLUTION_CHECK,\r\n        SETTLED,\r\n        REJECTED\r\n    }\r\n\r\n    struct Receipt {\r\n        uint256 receiptId;\n        string agentId;\n        uint256 auditTargetId;\n        bytes32 signalHash;\n        bytes32 reasoningHash;\n        uint16 integrityScore;\n        uint16 agentProbability;\n        uint16 referenceProbability;\n        int256 edgeBps;\n        uint256 suggestedTestnetUsdcAmount;\n        string decision;\r\n        LifecycleState lifecycleState;\r\n        uint256 timestamp;\r\n        address writer;\r\n    }\r\n\r\n    uint256 private nextReceiptId = 1;\r\n    mapping(uint256 => Receipt) private receipts;\r\n    mapping(bytes32 => uint256[]) private receiptsByAgentHash;\r\n\r\n    event ReceiptWritten(\n        uint256 indexed receiptId,\n        string agentId,\n        uint256 indexed auditTargetId,\n        bytes32 indexed reasoningHash,\n        uint16 integrityScore,\n        string decision,\n        address writer\n    );\n\r\n    event LifecycleUpdated(uint256 indexed receiptId, LifecycleState lifecycleState);\r\n\r\n    function writeReceipt(\r\n        string calldata agentId,\n        uint256 auditTargetId,\n        bytes32 signalHash,\n        bytes32 reasoningHash,\n        uint16 integrityScore,\n        uint16 agentProbability,\n        uint16 referenceProbability,\n        int256 edgeBps,\n        uint256 suggestedTestnetUsdcAmount,\n        string calldata decision\n    ) external returns (uint256 receiptId) {\r\n        require(bytes(agentId).length > 0, \"AGENT_REQUIRED\");\r\n        require(integrityScore <= 100, \"BAD_INTEGRITY_SCORE\");\n        require(agentProbability <= 100, \"BAD_AGENT_PROBABILITY\");\n        require(referenceProbability <= 100, \"BAD_REFERENCE_PROBABILITY\");\n\r\n        receiptId = nextReceiptId++;\r\n        receipts[receiptId] = Receipt({\r\n            receiptId: receiptId,\n            agentId: agentId,\n            auditTargetId: auditTargetId,\n            signalHash: signalHash,\n            reasoningHash: reasoningHash,\n            integrityScore: integrityScore,\n            agentProbability: agentProbability,\n            referenceProbability: referenceProbability,\n            edgeBps: edgeBps,\n            suggestedTestnetUsdcAmount: suggestedTestnetUsdcAmount,\n            decision: decision,\r\n            lifecycleState: LifecycleState.ENTRY,\r\n            timestamp: block.timestamp,\r\n            writer: msg.sender\r\n        });\r\n\n        receiptsByAgentHash[keccak256(bytes(agentId))].push(receiptId);\n        emit ReceiptWritten(receiptId, agentId, auditTargetId, reasoningHash, integrityScore, decision, msg.sender);\n    }\r\n\r\n    function updateLifecycleState(uint256 receiptId, LifecycleState lifecycleState) external {\r\n        require(receipts[receiptId].timestamp != 0, \"RECEIPT_NOT_FOUND\");\r\n        receipts[receiptId].lifecycleState = lifecycleState;\r\n        emit LifecycleUpdated(receiptId, lifecycleState);\r\n    }\r\n\r\n    function getReceipt(uint256 receiptId) external view returns (Receipt memory) {\r\n        require(receipts[receiptId].timestamp != 0, \"RECEIPT_NOT_FOUND\");\r\n        return receipts[receiptId];\r\n    }\r\n\r\n    function getReceiptsByAgent(string calldata agentId) external view returns (Receipt[] memory results) {\r\n        uint256[] memory ids = receiptsByAgentHash[keccak256(bytes(agentId))];\r\n        results = new Receipt[](ids.length);\r\n        for (uint256 i = 0; i < ids.length; i++) {\r\n            results[i] = receipts[ids[i]];\r\n        }\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}

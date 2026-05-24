@@ -13,32 +13,63 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { ArcDataState, ArcMarket } from "@/src/lib/arc/types";
+import type { SafeArcStatus } from "@/src/lib/arc/config";
+import { classifyDeadline } from "@/src/lib/markets/deadline";
 import type { ExternalMarket, ExternalMarketState } from "@/src/lib/markets/types";
-import type { SignalDataState } from "@/src/lib/signals/types";
+import type { PublicSignal, SignalDataState } from "@/src/lib/signals/types";
 
 type RadarViewProps = {
   arcMarketsState: ArcDataState<ArcMarket[]>;
   externalMarketsState: ExternalMarketState;
   signalsState: SignalDataState;
   receiptCount: number;
+  arcStatus: SafeArcStatus;
 };
 
 const FILTERS = ["All", "Macro", "Technology", "Crypto", "Politics"];
+const STOP_WORDS = new Set([
+  "about",
+  "after",
+  "again",
+  "against",
+  "before",
+  "between",
+  "could",
+  "from",
+  "have",
+  "into",
+  "market",
+  "markets",
+  "prediction",
+  "that",
+  "the",
+  "their",
+  "this",
+  "will",
+  "with",
+  "would",
+]);
+
+type RankedMarket = {
+  market: ExternalMarket;
+  score: number;
+  matchedTerms: string[];
+};
 
 export function RadarView({
   arcMarketsState,
   externalMarketsState,
   signalsState,
   receiptCount,
+  arcStatus,
 }: RadarViewProps) {
   const router = useRouter();
   const signals = signalsState.status === "configured" ? signalsState.signals : [];
-  const arcMarkets = arcMarketsState.status === "configured" ? arcMarketsState.data : [];
   const externalMarkets =
     externalMarketsState.status === "configured" ? externalMarketsState.markets : [];
 
   const [filter, setFilter] = useState("All");
-  const [activeSignalId, setActiveSignalId] = useState<string | null>(signals[0]?.id ?? null);
+  const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
   const [importingMarketId, setImportingMarketId] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -49,8 +80,14 @@ export function RadarView({
           signal.category.toLowerCase().includes(filter.toLowerCase()),
         );
 
-  const activeSignal = signals.find((signal) => signal.id === activeSignalId) ?? signals[0] ?? null;
-  const featuredMarket = externalMarkets[0] ?? null;
+  const activeSignal = signals.find((signal) => signal.id === activeSignalId) ?? null;
+  const rankedMarkets = rankMarketsForSignal(externalMarkets, activeSignal);
+  const matchedMarkets = activeSignal ? rankedMarkets.filter((item) => item.score > 0) : [];
+  const otherMarkets = activeSignal ? rankedMarkets.filter((item) => item.score === 0) : rankedMarkets;
+  const importReady =
+    arcStatus.marketRegistryConfigured &&
+    arcStatus.rpcConfigured &&
+    arcStatus.privateKeyConfigured;
 
   const statCards = [
     {
@@ -83,19 +120,19 @@ export function RadarView({
     {
       icon: ShieldCheck,
       label: "Imported to Arc",
-      value: arcMarkets.length > 0 ? String(arcMarkets.length) : "-",
-      badge: arcMarketsState.status === "configured" ? "Testnet" : "Config needed",
+      value: importReady ? "Ready" : "Config needed",
+      badge: importReady ? "Testnet" : "Missing env",
       badgeCls:
-        arcMarketsState.status === "configured"
+        importReady
           ? "text-violet-300 bg-violet-400/10"
           : "text-amber-300 bg-amber-400/10",
     },
     {
       icon: BarChart2,
-      label: "Receipts Written",
-      value: receiptCount > 0 ? String(receiptCount) : "-",
-      badge: "Arc",
-      badgeCls: "text-zinc-300 bg-white/10",
+      label: "Matched Markets",
+      value: activeSignal ? String(matchedMarkets.length) : "-",
+      badge: activeSignal ? "Ranked" : "Select signal",
+      badgeCls: activeSignal ? "text-cyan-300 bg-cyan-400/10" : "text-zinc-300 bg-white/10",
     },
   ];
 
@@ -125,7 +162,7 @@ export function RadarView({
         );
       }
 
-      router.push(`/marketcourt?marketId=${body.marketId}${activeSignal ? `&signalId=${activeSignal.id}` : ""}`);
+      router.push(`/marketcourt?marketId=${body.marketId}${activeSignal ? `&signalId=${encodeURIComponent(activeSignal.id)}` : ""}`);
     } catch (error) {
       setImportError(error instanceof Error ? error.message : "Could not import market to Arc testnet");
     } finally {
@@ -176,8 +213,19 @@ export function RadarView({
         />
         <SourceBadge
           label="Arc registry"
-          value={arcMarketsState.status === "configured" ? `${arcMarkets.length} imported` : "Not configured"}
-          ok={arcMarketsState.status === "configured"}
+          value={
+            arcStatus.marketRegistryConfigured
+              ? arcMarketsState.status === "configured"
+                ? `Configured (${arcMarketsState.data.length})`
+                : "Configured"
+              : "Not configured"
+          }
+          ok={arcStatus.marketRegistryConfigured}
+        />
+        <SourceBadge
+          label="Receipts"
+          value={arcStatus.receiptRegistryConfigured ? (receiptCount > 0 ? `Ready (${receiptCount})` : "Ready") : "Not configured"}
+          ok={arcStatus.receiptRegistryConfigured}
         />
       </div>
 
@@ -299,85 +347,56 @@ export function RadarView({
         <div className="flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02]">
           <div className="flex items-center gap-2 border-b border-white/[0.07] px-5 py-3.5 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
             <ShieldCheck size={12} className="text-violet-400" />
-            Live Market Import
+            Live Market Feed
           </div>
 
-          {featuredMarket ? (
-            <div className="flex flex-1 flex-col p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                Polymarket read-only source
-              </p>
-              <h2 className="mt-2 text-lg font-bold leading-snug text-white">
-                {featuredMarket.question}
-              </h2>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {[
-                  featuredMarket.category || "Prediction Market",
-                  `Platform: ${featuredMarket.platform}`,
-                  `Deadline: ${formatDeadline(featuredMarket.deadline)}`,
-                ].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] text-zinc-300"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Metric label="Implied prob." value={featuredMarket.impliedProbability ? `${featuredMarket.impliedProbability}%` : "-"} />
-                <Metric label="Liquidity" value={formatUsd(featuredMarket.liquidity)} accent="cyan" />
-                <Metric label="Volume" value={formatUsd(featuredMarket.volume)} />
-                <Metric label="External ID" value={shorten(featuredMarket.externalMarketId)} mono />
-              </div>
-
-              <div className="mt-4 space-y-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs leading-5 text-zinc-400">
-                <p>Resolution source: {featuredMarket.resolutionSource}</p>
-                <p>
-                  Metadata hash:{" "}
-                  <span className="font-mono text-zinc-300">{shorten(featuredMarket.metadataHash)}</span>
-                </p>
-                <Link
-                  href={featuredMarket.marketUrl}
-                  target="_blank"
-                  className="inline-flex font-bold text-violet-300 hover:text-violet-200"
-                >
-                  View source market &gt;
-                </Link>
-              </div>
-
-              <div className="mt-auto pt-5">
-                <div className="mb-3 flex items-center justify-between text-xs">
-                  <span className="text-zinc-500">Status</span>
-                  <span className="font-bold text-emerald-400">Ready to import to Arc testnet</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => importToArc(featuredMarket)}
-                  disabled={importingMarketId === featuredMarket.externalMarketId}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {importingMarketId === featuredMarket.externalMarketId
-                    ? "Importing to Arc..."
-                    : "Import to Arc and Send to MarketCourt >"}
-                </button>
-                {importError && (
-                  <div className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/[0.07] p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Import Failed</p>
-                    <p className="mt-1.5 break-words text-[11px] leading-5 text-rose-300">{importError}</p>
-                    <a
-                      href="/api/arc/status"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-rose-400/60 hover:text-rose-300"
-                    >
-                      Check Arc testnet status -&gt;
-                    </a>
+          {externalMarkets.length > 0 ? (
+            <div className="flex flex-1 flex-col gap-4 p-5">
+              {activeSignal ? (
+                <div className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-300">
+                    Active Signal Context
+                  </p>
+                  <h2 className="mt-2 text-sm font-bold leading-snug text-white">
+                    {activeSignal.title}
+                  </h2>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
+                    {activeSignal.summary}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-violet-400/10 px-2.5 py-0.5 text-[11px] font-bold text-violet-200">
+                      {activeSignal.category}
+                    </span>
+                    <span className="rounded-full bg-white/[0.05] px-2.5 py-0.5 text-[11px] text-zinc-300">
+                      {matchedMarkets.length} matched
+                    </span>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-xs text-zinc-400">
+                  Select a signal to rank related markets.
+                </div>
+              )}
+
+              {activeSignal && matchedMarkets.length > 0 && (
+                <MarketGroup
+                  title="Matched Markets"
+                  items={matchedMarkets}
+                  activeSignal={activeSignal}
+                  importingMarketId={importingMarketId}
+                  importError={importError}
+                  onImport={importToArc}
+                />
+              )}
+
+              <MarketGroup
+                title={activeSignal ? "Other Live Markets" : "Live Market Feed"}
+                items={otherMarkets}
+                activeSignal={activeSignal}
+                importingMarketId={importingMarketId}
+                importError={activeSignal && matchedMarkets.length > 0 ? null : importError}
+                onImport={importToArc}
+              />
             </div>
           ) : (
             <EmptyState
@@ -392,7 +411,7 @@ export function RadarView({
               body={
                 externalMarketsState.status === "error"
                   ? externalMarketsState.detail ?? externalMarketsState.message
-                  : externalMarketsState.message
+                  : getExternalMarketEmptyMessage(externalMarketsState)
               }
             />
           )}
@@ -427,6 +446,192 @@ function Metric({
   );
 }
 
+function MarketGroup({
+  title,
+  items,
+  activeSignal,
+  importingMarketId,
+  importError,
+  onImport,
+}: {
+  title: string;
+  items: RankedMarket[];
+  activeSignal: PublicSignal | null;
+  importingMarketId: string | null;
+  importError: string | null;
+  onImport: (market: ExternalMarket) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{title}</p>
+        <div className="mt-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 text-xs text-zinc-500">
+          No markets in this group.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{title}</p>
+        <span className="text-[10px] font-bold text-zinc-600">{items.length} markets</span>
+      </div>
+      <div className="space-y-3">
+        {items.map(({ market, score, matchedTerms }) => (
+          <MarketCard
+            key={market.externalMarketId}
+            market={market}
+            isMatched={Boolean(activeSignal && score > 0)}
+            matchedTerms={matchedTerms}
+            importing={importingMarketId === market.externalMarketId}
+            importError={importingMarketId === market.externalMarketId ? importError : null}
+            onImport={() => onImport(market)}
+          />
+        ))}
+      </div>
+      {importError && (
+        <div className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/[0.07] p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-rose-400">Import Failed</p>
+          <p className="mt-1.5 break-words text-[11px] leading-5 text-rose-300">{importError}</p>
+          <a
+            href="/api/arc/status"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold text-rose-400/60 hover:text-rose-300"
+          >
+            Check Arc testnet status -&gt;
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarketCard({
+  market,
+  isMatched,
+  matchedTerms,
+  importing,
+  importError,
+  onImport,
+}: {
+  market: ExternalMarket;
+  isMatched: boolean;
+  matchedTerms: string[];
+  importing: boolean;
+  importError: string | null;
+  onImport: () => void;
+}) {
+  const importEligibility = getImportEligibility(market);
+  const isShortHorizon = importEligibility.kind === "short-horizon";
+
+  return (
+    <article
+      className={`rounded-2xl border p-4 transition ${
+        isMatched
+          ? "border-violet-400/30 bg-violet-500/[0.06]"
+          : "border-white/[0.07] bg-white/[0.02]"
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] text-zinc-300">
+          {market.category || "Prediction Market"}
+        </span>
+        <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-0.5 text-[11px] font-bold text-cyan-300">
+          {market.platform}
+        </span>
+        {isMatched && (
+          <span className="rounded-full border border-violet-400/30 bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-bold text-violet-200">
+            Matched to selected signal
+          </span>
+        )}
+        {isShortHorizon && (
+          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-200">
+            Short Horizon
+          </span>
+        )}
+      </div>
+
+      <h2 className="mt-3 text-base font-bold leading-snug text-white">{market.question}</h2>
+
+      {matchedTerms.length > 0 && (
+        <p className="mt-1 text-[11px] text-violet-300">
+          Matched terms: {matchedTerms.slice(0, 5).join(", ")}
+        </p>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Metric label="Implied prob." value={market.impliedProbability ? `${market.impliedProbability}%` : "-"} />
+        <Metric label="Liquidity" value={formatUsd(market.liquidity)} accent="cyan" />
+        <Metric label="Volume" value={formatUsd(market.volume)} />
+        <Metric label="Deadline" value={formatDeadline(market.deadline)} />
+      </div>
+
+      <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Audit Mode</p>
+        <p className={`mt-1 text-xs font-bold ${isShortHorizon ? "text-amber-200" : "text-zinc-200"}`}>
+          {importEligibility.auditLabel}
+        </p>
+      </div>
+
+      {isShortHorizon && (
+        <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2 text-[11px] leading-5 text-amber-100">
+          <p className="font-bold">Short Horizon Audit</p>
+          <p className="mt-1">
+            This market resolves soon, so AgoraLens will run a fast integrity check and record a testnet receipt only.
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {importEligibility.warnings.map((warning) => (
+              <span key={warning} className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-200">
+                {warning}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs leading-5 text-zinc-400">
+        <p>Resolution source: {market.resolutionSource}</p>
+        <p>
+          External ID: <span className="font-mono text-zinc-300">{shorten(market.externalMarketId)}</span>
+        </p>
+        <p>
+          Metadata hash: <span className="font-mono text-zinc-300">{shorten(market.metadataHash)}</span>
+        </p>
+        <Link
+          href={market.marketUrl}
+          target="_blank"
+          className="inline-flex font-bold text-violet-300 hover:text-violet-200"
+        >
+          View source market &gt;
+        </Link>
+      </div>
+
+      <button
+        type="button"
+        onClick={onImport}
+        disabled={importing || !importEligibility.ok}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-600 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(124,58,237,0.35)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {importing ? "Importing to Arc..." : "Import to Arc & Send to MarketCourt"}
+      </button>
+      {!importEligibility.ok && (
+        <p className="mt-2 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2 text-[11px] text-amber-200">
+          {importEligibility.reason}
+        </p>
+      )}
+
+      {importError && (
+        <p className="mt-2 rounded-xl border border-rose-400/20 bg-rose-500/[0.07] px-3 py-2 text-[11px] text-rose-300">
+          {importError}
+        </p>
+      )}
+    </article>
+  );
+}
+
 function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-10 text-center">
@@ -449,6 +654,70 @@ function SourceBadge({ label, value, ok }: { label: string; value: string; ok: b
       {label}: {value}
     </span>
   );
+}
+
+function rankMarketsForSignal(markets: ExternalMarket[], signal: PublicSignal | null): RankedMarket[] {
+  if (!signal) {
+    return markets.map((market) => ({ market, score: 0, matchedTerms: [] }));
+  }
+
+  const keywords = extractKeywords(`${signal.title} ${signal.summary} ${signal.category}`);
+
+  return markets
+    .map((market) => {
+      const marketText = `${market.question} ${market.category}`.toLowerCase();
+      const matchedTerms = keywords.filter((keyword) => marketText.includes(keyword));
+      const exactCategoryMatch =
+        signal.category &&
+        market.category.toLowerCase().includes(signal.category.toLowerCase());
+      const score = matchedTerms.length * 10 + (exactCategoryMatch ? 8 : 0);
+
+      return { market, score, matchedTerms };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.market.liquidity - a.market.liquidity;
+    });
+}
+
+function extractKeywords(text: string): string[] {
+  const words = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 4 && !STOP_WORDS.has(word));
+
+  return Array.from(new Set(words)).slice(0, 24);
+}
+
+function getImportEligibility(market: ExternalMarket):
+  | { ok: true; kind: "short-horizon" | "standard"; auditLabel: string; warnings: readonly string[] }
+  | { ok: false; kind: "invalid" | "expired" | "too-soon"; reason: string; auditLabel: string; warnings: readonly string[] } {
+  const classification = classifyDeadline(market.deadline);
+
+  if (!classification.importable) {
+    return {
+      ok: false,
+      kind: classification.kind,
+      reason: classification.blockReason,
+      auditLabel: classification.auditLabel,
+      warnings: classification.warnings,
+    };
+  }
+
+  return {
+    ok: true,
+    kind: classification.kind,
+    auditLabel: classification.auditLabel,
+    warnings: classification.warnings,
+  };
+}
+
+function getExternalMarketEmptyMessage(state: ExternalMarketState): string {
+  if (state.status === "empty" || state.status === "not-configured") return state.message;
+  if (state.status === "error") return state.detail ?? state.message;
+  return "No live external markets were returned by the configured source.";
 }
 
 function formatTimeAgo(iso: string): string {

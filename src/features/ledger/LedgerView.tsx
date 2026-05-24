@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle2, Clock, Copy, Database, Download, ExternalLink, Shield, Wallet } from "lucide-react";
 import type { ArcDataState, ArcMarket, ReasoningReceipt, ReceiptLifecycleState } from "@/src/lib/arc/types";
 import { getAgentProfile } from "@/src/lib/agent-session";
+import { classifyDeadline } from "@/src/lib/markets/deadline";
 
 const LIFECYCLE_ORDER: ReceiptLifecycleState[] = [
   "ENTRY",
@@ -30,6 +31,10 @@ export function LedgerView({
   const selectedReceipt = receipts.find((r) => r.receiptId === selectedReceiptId) ?? receipts[0] ?? null;
   const selectedMarket = selectedReceipt
     ? markets.find((market) => market.marketId === selectedReceipt.marketId)
+    : null;
+  const receiptTimestamp = Number(selectedReceipt?.timestamp ?? 0);
+  const lifecycleDeadline = selectedMarket
+    ? classifyDeadline(selectedMarket.deadline, receiptTimestamp > 0 ? receiptTimestamp : undefined)
     : null;
 
   return (
@@ -125,6 +130,11 @@ export function LedgerView({
                 <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
                   {selectedReceipt.lifecycleState}
                 </span>
+                {lifecycleDeadline?.kind === "short-horizon" && (
+                  <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold text-amber-200">
+                    Short Horizon
+                  </span>
+                )}
                 <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-[10px] font-bold text-violet-300">
                   Agent Multi-Sig
                 </span>
@@ -250,20 +260,24 @@ export function LedgerView({
 
                   const STEP_INFO: Record<ReceiptLifecycleState, { title: string; body: string }> = {
                     ENTRY: {
-                      title: "Signal Discovery (Radar)",
-                      body: "Signal detected and matched to an Arc market. Sentiment analysis confirmed.",
+                      title: "Entry",
+                      body: lifecycleDeadline?.kind === "short-horizon"
+                        ? "Fast audit target imported to Arc Testnet for receipt-only reasoning."
+                        : "Audit target imported to Arc Testnet for receipt-only reasoning.",
                     },
                     MONITORING: {
                       title: "Active Market Monitoring",
-                      body: "Continuous polling of resolution states. Oracle synchronized.",
+                      body: lifecycleDeadline?.kind === "short-horizon"
+                        ? "Compressed monitoring window with higher urgency before resolution."
+                        : "Lifecycle monitoring continues until the resolution window.",
                     },
                     RESOLUTION_CHECK: {
                       title: "Resolution Check",
                       body: "Market outcome is being verified against the resolution source.",
                     },
                     SETTLED: {
-                      title: "Final Settlement",
-                      body: "Market settled. Profits or collateral routed to Arc Vault.",
+                      title: "Final Settlement Receipt",
+                      body: "Final audit receipt records settlement reasoning on Arc Testnet only.",
                     },
                     REJECTED: {
                       title: "Rejected",

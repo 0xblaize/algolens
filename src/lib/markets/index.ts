@@ -1,7 +1,7 @@
 import { getPolymarketMarkets } from "./polymarket";
 import type { ExternalMarketState } from "./types";
 
-export async function getExternalMarkets(): Promise<ExternalMarketState> {
+export async function getExternalMarkets(limit = 30): Promise<ExternalMarketState> {
   if (process.env.LIVE_MARKET_SOURCE === "disabled") {
     return {
       status: "not-configured",
@@ -10,5 +10,5 @@ export async function getExternalMarkets(): Promise<ExternalMarketState> {
     };
   }
 
-  return getPolymarketMarkets();
+  return getPolymarketMarkets(limit);
 }

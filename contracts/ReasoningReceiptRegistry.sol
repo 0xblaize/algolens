@@ -13,14 +13,14 @@ contract ReasoningReceiptRegistry {
     struct Receipt {
         uint256 receiptId;
         string agentId;
-        uint256 marketId;
+        uint256 auditTargetId;
         bytes32 signalHash;
         bytes32 reasoningHash;
         uint16 integrityScore;
         uint16 agentProbability;
-        uint16 marketProbability;
+        uint16 referenceProbability;
         int256 edgeBps;
-        uint256 suggestedUsdcAmount;
+        uint256 suggestedTestnetUsdcAmount;
         string decision;
         LifecycleState lifecycleState;
         uint256 timestamp;
@@ -34,7 +34,7 @@ contract ReasoningReceiptRegistry {
     event ReceiptWritten(
         uint256 indexed receiptId,
         string agentId,
-        uint256 indexed marketId,
+        uint256 indexed auditTargetId,
         bytes32 indexed reasoningHash,
         uint16 integrityScore,
         string decision,
@@ -45,33 +45,33 @@ contract ReasoningReceiptRegistry {
 
     function writeReceipt(
         string calldata agentId,
-        uint256 marketId,
+        uint256 auditTargetId,
         bytes32 signalHash,
         bytes32 reasoningHash,
         uint16 integrityScore,
         uint16 agentProbability,
-        uint16 marketProbability,
+        uint16 referenceProbability,
         int256 edgeBps,
-        uint256 suggestedUsdcAmount,
+        uint256 suggestedTestnetUsdcAmount,
         string calldata decision
     ) external returns (uint256 receiptId) {
         require(bytes(agentId).length > 0, "AGENT_REQUIRED");
         require(integrityScore <= 100, "BAD_INTEGRITY_SCORE");
         require(agentProbability <= 100, "BAD_AGENT_PROBABILITY");
-        require(marketProbability <= 100, "BAD_MARKET_PROBABILITY");
+        require(referenceProbability <= 100, "BAD_REFERENCE_PROBABILITY");
 
         receiptId = nextReceiptId++;
         receipts[receiptId] = Receipt({
             receiptId: receiptId,
             agentId: agentId,
-            marketId: marketId,
+            auditTargetId: auditTargetId,
             signalHash: signalHash,
             reasoningHash: reasoningHash,
             integrityScore: integrityScore,
             agentProbability: agentProbability,
-            marketProbability: marketProbability,
+            referenceProbability: referenceProbability,
             edgeBps: edgeBps,
-            suggestedUsdcAmount: suggestedUsdcAmount,
+            suggestedTestnetUsdcAmount: suggestedTestnetUsdcAmount,
             decision: decision,
             lifecycleState: LifecycleState.ENTRY,
             timestamp: block.timestamp,
@@ -79,7 +79,7 @@ contract ReasoningReceiptRegistry {
         });
 
         receiptsByAgentHash[keccak256(bytes(agentId))].push(receiptId);
-        emit ReceiptWritten(receiptId, agentId, marketId, reasoningHash, integrityScore, decision, msg.sender);
+        emit ReceiptWritten(receiptId, agentId, auditTargetId, reasoningHash, integrityScore, decision, msg.sender);
     }
 
     function updateLifecycleState(uint256 receiptId, LifecycleState lifecycleState) external {

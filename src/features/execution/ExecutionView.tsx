@@ -17,6 +17,8 @@ export function ExecutionView() {
   const decision = params.get("decision") ?? "";
   const reasoningHash = params.get("reasoningHash") ?? "";
   const signalHash = params.get("signalHash") ?? "";
+  const routeMode = params.get("routeMode") ?? "Standard Testnet Receipt";
+  const auditLabel = params.get("auditLabel") ?? "Standard Lifecycle Audit";
 
   const hasAuditData = !!decision;
   const edgePct = (edgeBps / 100).toFixed(2);
@@ -30,7 +32,7 @@ export function ExecutionView() {
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
 
-  async function deployLiquidity() {
+  async function writeReceipt() {
     setDeploying(true);
     setDeployError(null);
     try {
@@ -143,7 +145,7 @@ export function ExecutionView() {
             </div>
           </div>
 
-          {/* Edge + Suggested */}
+          {/* Edge + Receipt Notional */}
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2">
@@ -156,10 +158,10 @@ export function ExecutionView() {
             <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2">
                 <Layers size={14} className="text-violet-400" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Suggested</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Receipt Notional</p>
               </div>
               <p className="mt-3 text-4xl font-bold text-white">{suggestedUsdc}</p>
-              <p className="mt-2 text-xs leading-5 text-zinc-400">USDC Risk-Adjusted Allocation</p>
+              <p className="mt-2 text-xs leading-5 text-zinc-400">Testnet-only reasoning amount, not deployed capital</p>
             </div>
           </div>
 
@@ -175,10 +177,10 @@ export function ExecutionView() {
               {[
                 ["From", agentWallet ? `Agent Wallet ${agentWallet.slice(0, 6)}...${agentWallet.slice(-4)}` : "Agent Wallet"],
                 ["Network", "Arc Testnet"],
-                ["Fee asset", "USDC"],
-                ["Native gas required", "No"],
-                ["Route type", "Gasless USDC execution"],
-                ["Mode", "Testnet"],
+                ["Fee asset", "Arc testnet gas"],
+                ["Native gas required", "Yes, testnet only"],
+                ["Route type", "Reasoning receipt write"],
+                ["Mode", routeMode],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -209,7 +211,7 @@ export function ExecutionView() {
               <div className="flex flex-1 flex-col items-center gap-1">
                 <div className="h-px w-full bg-gradient-to-r from-transparent via-violet-400/40 to-transparent" />
                 <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-0.5 text-[11px] font-bold text-violet-300">
-                  Arc Protocol
+                  Arc Testnet Receipt
                 </span>
                 <div className="h-px w-full bg-gradient-to-r from-transparent via-violet-400/40 to-transparent" />
               </div>
@@ -226,14 +228,17 @@ export function ExecutionView() {
                 <Shield size={14} className="text-emerald-400" />
                 <span className="text-sm font-bold text-emerald-400">Account Abstraction</span>
               </div>
-              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">L2 Gasless Enabled</p>
+              <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">Audit Receipt Only</p>
+              <p className="mt-2 text-xs leading-5 text-zinc-400">
+                {auditLabel}. No real orders, no mainnet funds, and no live betting trades are executed.
+              </p>
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-3 text-center">
               {[
-                { label: "Slippage", value: "~0.05%" },
-                { label: "Liquidity", value: "Testnet" },
-                { label: "Speed", value: "~2.4s" },
+                { label: "Orders", value: "None" },
+                { label: "Funds", value: "Testnet only" },
+                { label: "Receipt", value: "On-chain" },
               ].map((s) => (
                 <div key={s.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{s.label}</p>
@@ -243,7 +248,7 @@ export function ExecutionView() {
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              <p className="text-xs text-zinc-400">Total Deployment Value</p>
+              <p className="text-xs text-zinc-400">Testnet Receipt Notional</p>
               <p className="text-xl font-bold text-white">
                 {suggestedUsdc} <span className="text-sm text-zinc-400">USDC</span>
               </p>
@@ -281,7 +286,7 @@ export function ExecutionView() {
             </div>
           ) : (
             <button
-              onClick={deployLiquidity}
+              onClick={writeReceipt}
               disabled={deploying}
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-500 to-violet-600 py-4 text-base font-bold text-white shadow-[0_10px_30px_rgba(124,58,237,0.4)] transition hover:scale-[1.01] disabled:opacity-60"
             >

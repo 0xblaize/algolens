@@ -12,7 +12,11 @@ import {
   Shield,
   Wallet,
 } from "lucide-react";
-import { clearAgentProfile, getAgentProfile, type AgentProfile } from "@/src/lib/agent-session";
+import {
+  clearAgentProfile,
+  getAgentProfile,
+  type AgentProfile,
+} from "@/src/lib/agent-session";
 
 type WalletStatus = {
   arcWallet: {
@@ -29,7 +33,9 @@ type WalletStatus = {
 };
 
 export function AgentAccountCard() {
-  const [profile, setProfile] = useState<AgentProfile | null>(() => getAgentProfile());
+  const [profile, setProfile] = useState<AgentProfile | null>(() =>
+    getAgentProfile(),
+  );
   const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null);
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -85,7 +91,8 @@ export function AgentAccountCard() {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
-  const arcAddress = walletStatus?.arcWallet.address ?? profile.walletAddress ?? null;
+  const arcAddress =
+    walletStatus?.arcWallet.address ?? profile.walletAddress ?? null;
   const circleStatus = walletStatus?.circle.configured
     ? walletStatus.circle.wallets.length > 0
       ? "Connected"
@@ -93,7 +100,9 @@ export function AgentAccountCard() {
     : profile.circleWallet === "configured"
       ? "Configured"
       : "Not configured";
-  const receiptStatus = walletStatus?.receiptRegistryAddress ? "Configured" : "Not configured";
+  const receiptStatus = walletStatus?.receiptRegistryAddress
+    ? "Configured"
+    : "Not configured";
 
   return (
     <div ref={ref} className="relative">
@@ -125,14 +134,23 @@ export function AgentAccountCard() {
                 {initials || "A"}
               </span>
               <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{profile.name}</p>
-                <p className="truncate font-mono text-[10px] text-zinc-500">{profile.agentId}</p>
+                <p className="truncate font-semibold text-white">
+                  {profile.name}
+                </p>
+                <p className="truncate font-mono text-[10px] text-zinc-500">
+                  {profile.agentId}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-1 p-2">
-            <StatusRow icon={Wallet} label="Circle Wallet" value={circleStatus} good={circleStatus !== "Not configured"} />
+            <StatusRow
+              icon={Wallet}
+              label="Circle Wallet"
+              value={circleStatus}
+              good={circleStatus !== "Not configured"}
+            />
             <StatusRow
               icon={Network}
               label="Arc Testnet wallet"
@@ -143,18 +161,37 @@ export function AgentAccountCard() {
             <StatusRow
               icon={CircleDot}
               label="Testnet USDC balance"
-              value={walletStatus?.arcWallet.rpcStatus === "connected" ? `${formatBalance(walletStatus.arcWallet.balance)} USDC` : "Unavailable"}
+              value={
+                walletStatus?.arcWallet.rpcStatus === "connected"
+                  ? `${formatBalance(walletStatus.arcWallet.balance)} USDC`
+                  : "Unavailable"
+              }
               good={walletStatus?.arcWallet.rpcStatus === "connected"}
             />
-            <StatusRow icon={Shield} label="USDC gasless mode" value="Testnet only" good />
-            <StatusRow icon={Shield} label="Paymaster mode" value="Ready state" good={false} />
-            <StatusRow icon={Database} label="Receipt registry" value={receiptStatus} good={receiptStatus === "Configured"} />
+            <StatusRow
+              icon={Shield}
+              label="USDC gasless mode"
+              value="Testnet only"
+              good
+            />
+            <StatusRow
+              icon={Shield}
+              label="Paymaster mode"
+              value="Ready state"
+              good={false}
+            />
+            <StatusRow
+              icon={Database}
+              label="Receipt registry"
+              value={receiptStatus}
+              good={receiptStatus === "Configured"}
+            />
           </div>
 
-          {/* <div className="mx-2 mb-2 rounded-xl border border-violet-400/15 bg-violet-500/[0.05] px-3 py-2.5 text-[10px] leading-4 text-zinc-400">
-            The wallet panel supports Radar -> MarketCourt -> Execution -> Ledger. No mainnet funds or live orders are used.
-          </div> */}
-
+          <div className="mx-2 mb-2 rounded-xl border border-violet-400/15 bg-violet-500/[0.05] px-3 py-2.5 text-[10px] leading-4 text-zinc-400">
+            Agent Wallet supports Radar → MarketCourt → Execution → Ledger. No
+            mainnet funds or real market orders are used.
+          </div>
           <div className="border-t border-white/[0.07] p-2">
             <button
               onClick={handleLogout}
@@ -191,7 +228,9 @@ function StatusRow({
         <span className="truncate text-xs">{label}</span>
       </div>
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className={`truncate text-right text-[11px] font-bold ${good ? "text-emerald-400" : "text-amber-300"}`}>
+        <span
+          className={`truncate text-right text-[11px] font-bold ${good ? "text-emerald-400" : "text-amber-300"}`}
+        >
           {value}
         </span>
         {copyValue && (
