@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (state.status === "error") {
     return NextResponse.json(
       {
-        error: "Live external market source unavailable.",
+        error: "Live external market source is offline.",
         detail: state.detail ?? state.message,
       },
       { status: 503 },
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   if (state.status === "not-configured") {
     return NextResponse.json(
       {
-        error: "Live external market source unavailable.",
+        error: "Live external market source is offline.",
         detail: state.message,
       },
       { status: 503 },

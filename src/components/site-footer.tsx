@@ -33,7 +33,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 px-5 py-5 text-center text-xs text-zinc-500">
-        © 2026 AgoraLens. AI-driven integrity for Web3 markets.
+        © 2026 AgoraLens. AI-driven integrity for prediction markets.
       </div>
     </footer>
   );

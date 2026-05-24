@@ -187,7 +187,7 @@ async function tryGetFromMarkets(limit: number): Promise<ExternalMarketState> {
     if (!res.ok) {
       return {
         status: "error",
-        message: "Live external market source unavailable.",
+        message: "Live external market source is offline.",
         detail: `Polymarket responded with HTTP ${res.status}`,
       };
     }
@@ -215,7 +215,7 @@ async function tryGetFromMarkets(limit: number): Promise<ExternalMarketState> {
   } catch (error) {
     return {
       status: "error",
-      message: "Live external market source unavailable.",
+      message: "Live external market source is offline.",
       detail: error instanceof Error ? error.message : String(error),
     };
   }

@@ -13,7 +13,7 @@ import { runGeminiAudit } from "@/src/lib/ai/gemini";
  *   { marketId: string, agentId: string, signal?: SignalPayload }
  *
  * On success:  200 + AuditResult JSON
- * On failure:  4xx/500 + { error: string }  — always a real error, never fake data
+ * On failure:  4xx/500 + { error: string }  — always a provider or validation error, never synthetic audit data
  */
 
 type SignalPayload = {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   const market = await getArcMarketById(body.marketId);
   if (!market) {
     return NextResponse.json(
-      { error: "Arc testnet market not found or registry not configured" },
+      { error: "Arc testnet market not found or registry pending configuration" },
       { status: 404 },
     );
   }

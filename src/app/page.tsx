@@ -20,7 +20,7 @@ export default function Home() {
       <SiteNavbar />
       <section className="relative min-h-screen">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_72%,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_86%_24%,rgba(124,58,237,0.26),transparent_38%),linear-gradient(180deg,#15151f_0%,#101018_88%)]" />
-        <div className="relative mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-16 px-6 pt-20 sm:px-10 md:pt-24 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:pl-4 lg:pr-16">
+        <div className="relative mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-16 px-6 pt-20 sm:px-10 md:pt-24 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:px-16">
           <div className="flex flex-col text-center md:text-left">
             <div className="mb-6 inline-flex w-fit rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-[11px] font-semibold text-violet-200 md:self-start self-center">
               Autonomous Market Integrity Agent

@@ -33,13 +33,18 @@ type WalletStatus = {
 };
 
 export function AgentAccountCard() {
-  const [profile, setProfile] = useState<AgentProfile | null>(() =>
-    getAgentProfile(),
-  );
+  const [profile, setProfile] = useState<AgentProfile | null>(null);
   const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null);
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setProfile(getAgentProfile());
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -99,10 +104,10 @@ export function AgentAccountCard() {
       : "Configured"
     : profile.circleWallet === "configured"
       ? "Configured"
-      : "Not configured";
+      : "Circle pending";
   const receiptStatus = walletStatus?.receiptRegistryAddress
     ? "Configured"
-    : "Not configured";
+    : "Registry pending";
 
   return (
     <div ref={ref} className="relative">
@@ -149,12 +154,12 @@ export function AgentAccountCard() {
               icon={Wallet}
               label="Circle Wallet"
               value={circleStatus}
-              good={circleStatus !== "Not configured"}
+              good={circleStatus !== "Circle pending"}
             />
             <StatusRow
               icon={Network}
               label="Arc Testnet wallet"
-              value={arcAddress ? shortValue(arcAddress) : "Not connected"}
+              value={arcAddress ? shortValue(arcAddress) : "Wallet pending"}
               good={Boolean(arcAddress)}
               copyValue={arcAddress}
             />
@@ -164,7 +169,7 @@ export function AgentAccountCard() {
               value={
                 walletStatus?.arcWallet.rpcStatus === "connected"
                   ? `${formatBalance(walletStatus.arcWallet.balance)} USDC`
-                  : "Unavailable"
+                  : "Pending RPC"
               }
               good={walletStatus?.arcWallet.rpcStatus === "connected"}
             />

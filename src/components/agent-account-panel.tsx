@@ -56,7 +56,7 @@ export function AgentAccountPanel() {
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-zinc-500">Status</p>
-              <p className="text-xs text-emerald-400">✓ Active</p>
+              <p className="text-xs text-emerald-400">Active</p>
             </div>
             {agent.email && (
               <div>

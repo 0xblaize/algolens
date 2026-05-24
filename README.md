@@ -1,72 +1,92 @@
 # AgoraLens
 
-Autonomous AI market integrity agent for Arc testnet market contracts and USDC reasoning receipts.
+AgoraLens is an AI market integrity agent for prediction markets. It connects live signal sources to live market feeds, imports selected markets to Arc Testnet, runs MarketCourt AI audits, writes reasoning receipts, and tracks the receipt lifecycle in Ledger.
 
-## Problem
+## What AgoraLens Does
 
-Prediction markets can be vague, manipulated, illiquid, or poorly resolved. Agents that only chase alpha can route capital into markets that should fail a basic integrity audit.
+- Loads live public signals from GDELT and Google News RSS.
+- Loads a read-only Polymarket market feed.
+- Imports selected markets as Arc Testnet audit targets.
+- Runs MarketCourt with Bull, Bear, and Judge analysis using Gemini.
+- Writes AI reasoning receipts to the Arc Testnet receipt registry.
+- Shows receipt ID, lifecycle state, tx hash, explorer link, and receipt JSON in Ledger.
 
-## Solution
+## Live Flow
 
-AgoraLens audits before capital moves. It scans public signals, matches them to Arc testnet market contracts, runs a MarketCourt audit, calculates probability discrepancy, sizes a testnet USDC route, writes reasoning receipts on Arc testnet, and monitors the lifecycle until settlement.
+1. Create or restore an Agent Wallet session.
+2. Open Radar to review live signal feed and live market feed.
+3. Import a selected market to Arc Testnet.
+4. Run MarketCourt to produce a market integrity audit and verdict.
+5. Write a reasoning receipt to Arc Testnet.
+6. Open Ledger to review the receipt, transaction hash, explorer link, and lifecycle monitor.
 
-## Agora Agents Fit
+## Arc Testnet Contracts
 
-- Agents interface with markets through Radar and Arc testnet market contracts.
-- MarketCourt makes agentic decisions with Bull, Bear, and Judge logic.
-- Receipts are recorded on Arc testnet.
-- Amounts, sizing, and fees are denominated in testnet USDC.
-- Lifecycle monitoring continues until settlement.
+AgoraLens uses Arc Testnet contracts for audit targets and reasoning receipts:
 
-## RFB Mapping
+- `MarketAuditRegistry` stores imported market metadata as audit targets.
+- `ReasoningReceiptRegistry` stores MarketCourt receipt data.
+- The subgraph indexes market and receipt events when configured.
+- RPC fallback reads registry state directly when a subgraph is not available.
 
-- RFB 02 Prediction Market Trader Intelligence
-- RFB 05 Cross Platform Arbitrage Agent
-- RFB 06 Social Trading Intelligence
+All contract writes are Arc Testnet only.
 
-## Circle and Arc Usage
+## Circle Wallet Usage
 
-- Arc testnet contract registry for markets.
-- Arc testnet receipt registry for AI reasoning receipts.
-- USDC-denominated execution logic.
-- Circle Wallets onboarding when configured.
-- Paymaster-ready module when Circle/Arc config is available.
-- Gateway-ready module when credentials are available.
-- The Graph indexing for market and receipt events.
+Circle Wallet configuration is optional for local development. When Circle credentials are present, AgoraLens can use wallet-backed onboarding. Without Circle credentials, the app uses a Local Agent Session for testnet flow access.
 
-## What Is Live
+No mainnet funds are used. No real orders are placed.
 
-- Arc testnet contract source code.
-- Hardhat deployment script for Arc testnet.
-- Receipt write API that only runs when Arc testnet config and a testnet private key are present.
-- Subgraph schema and mappings for market/receipt events.
-- Radar adapters for configured public signals and Arc testnet markets.
-- MarketCourt audit API using real registry market metadata when configured.
+## MarketCourt
 
-## What Is Not Live
+MarketCourt uses Gemini to produce structured JSON audits with:
 
-- No mainnet trading.
-- No real funds moved.
-- No real market orders.
-- No unknown Arc/Agora market API is connected.
-- Circle Wallets is shown as not configured until credentials are provided.
+- Bull Agent argument
+- Bear Agent risk analysis
+- Judge Agent verdict
+- Integrity score
+- Agent probability
+- Market probability
+- Edge in basis points
+- Risk flags
+- Final MarketCourt verdict
 
+The backend requests strict JSON and validates the response before the UI renders it.
+
+## Signal and Market Sources
+
+- GDELT and Google News RSS provide public signal inputs.
+- Polymarket is used as a read-only market feed.
+- AgoraLens does not place trades through Polymarket.
+- Imported markets are recorded as Arc Testnet audit targets.
+
+## Safety Scope
+
+- Arc Testnet only.
+- Testnet receipt writes only.
+- No mainnet funds.
+- No real orders.
+- No live betting trades.
+- USDC values are testnet receipt notionals for reasoning and audit records.
 
 ## Run Locally
 
 ```bash
 npm install
 npm run dev
-npm run build
 ```
 
-## Install ARC CLI
+Open:
+
+```text
+http://127.0.0.1:3000
+```
+
+Build and lint:
 
 ```bash
-uv tool install git+https://github.com/the-canteen-dev/ARC-cli
-arc --help
-arc-cli --help
-ARC-cli --help
+npm run build
+npm run lint
 ```
 
 ## Compile and Deploy Contracts
@@ -76,22 +96,44 @@ npm run contracts:compile
 npm run contracts:deploy:arc
 ```
 
-The deploy command prints:
+The deploy command prints the Arc Testnet registry addresses:
 
-```bash
+```text
 NEXT_PUBLIC_MARKET_REGISTRY_ADDRESS=...
 NEXT_PUBLIC_RECEIPT_REGISTRY_ADDRESS=...
 ```
 
-Add those addresses to `.env.local`.
+Add those values to `.env.local`.
 
-## Test Flow
+## Environment Variables
 
-1. Open `/create-agent`.
-2. Configure Circle Wallets or use the honest local profile state.
-3. Open `/dashboard#radar`.
-4. Configure `NEWS_API_KEY` and Arc testnet market registry values to load real Radar inputs.
-5. Send a configured Arc market to MarketCourt.
-6. Call `/api/marketcourt/audit` with `marketId`, `signal`, and `agentId`.
-7. Use `/api/execution/write-receipt` only with Arc testnet credentials.
-8. Open `/dashboard#ledger` to read receipts through the subgraph or RPC fallback.
+Create `.env.local` and configure only the values you need:
+
+```text
+ARC_RPC_URL=
+ARC_PRIVATE_KEY_TESTNET=
+NEXT_PUBLIC_ARC_CHAIN_ID=5042002
+NEXT_PUBLIC_ARC_EXPLORER_URL=https://testnet.arcscan.app
+NEXT_PUBLIC_MARKET_REGISTRY_ADDRESS=
+NEXT_PUBLIC_RECEIPT_REGISTRY_ADDRESS=
+NEXT_PUBLIC_ARC_SUBGRAPH_URL=
+
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.0-flash
+
+NEWS_API_KEY=
+
+CIRCLE_API_KEY=
+CIRCLE_ENTITY_SECRET=
+CIRCLE_WALLET_SET_ID=
+```
+
+Never commit private keys, API keys, or entity secrets.
+
+## Verification Checklist
+
+- Radar shows provider status for signals, markets, Arc registry, and receipts.
+- Import writes an Arc Testnet audit target.
+- MarketCourt returns a validated Gemini verdict.
+- Execution writes an Arc Testnet reasoning receipt.
+- Ledger shows receipt ID, lifecycle state, tx hash when available, and explorer link.

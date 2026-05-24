@@ -195,7 +195,7 @@ export function MarketCourtPreview() {
       biasCls: "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30",
       roleCls: "text-violet-400",
       avatar: "/agent-bull.png",
-      log: "Scanned Polymarket Contract #482. Rule clarity: 92%. Volume verification shows no organic wash trading signatures found. Recommendation: DEPLOY_CAPITAL.",
+      log: "Scanned Polymarket Contract #482. Rule clarity: 92%. Volume verification shows no organic wash trading signatures found. Recommendation: write Arc Testnet receipt.",
     },
     {
       name: "Skeptic.ai",
@@ -213,7 +213,7 @@ export function MarketCourtPreview() {
       biasCls: "bg-zinc-700/50 text-zinc-300 ring-1 ring-white/10",
       roleCls: "text-cyan-400",
       avatar: "/agent-judge.png",
-      log: "Consolidated inputs from Argus and Skeptic. Adjusted integrity score to 78.4. Liquidity route via Arc confirmed for 50k USDC batch.",
+      log: "Consolidated inputs from Argus and Skeptic. Adjusted integrity score to 78.4. Arc Testnet receipt route confirmed with no real orders.",
     },
   ];
 
@@ -246,7 +246,7 @@ export function MarketCourtPreview() {
             {/* Avatar row */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {/* Circular anime avatar with online dot */}
+                {/* Agent avatar with online dot */}
                 <div className="relative shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -309,7 +309,7 @@ export function LifecycleTransparency() {
         <div>
           <h2 className="text-3xl font-semibold leading-tight text-white">Lifecycle Transparency</h2>
           <p className="mt-4 text-sm leading-6 text-zinc-400">
-            From initial trade entry to the final settlement receipt, <br />
+            From market entry to the final settlement receipt, <br />
             AgoraLens provides a verifiable proof-of-integrity trail.
           </p>
           <Link
@@ -328,7 +328,7 @@ export function LifecycleTransparency() {
                 <div>
                   <p className="text-sm font-semibold text-white">{step}</p>
                   <p className="mt-1 text-xs leading-5 text-zinc-500">
-                    {index === 0 && "USDC route confirmed"}
+                    {index === 0 && "Testnet route confirmed"}
                     {index === 1 && "Price sync active"}
                     {index === 2 && "Oracle verification"}
                     {index === 3 && "Receipt generated"}

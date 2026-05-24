@@ -57,7 +57,7 @@ type SignalInput =
 /**
  * Runs a MarketCourt audit via the Gemini API.
  * Throws a descriptive error (no API key in message) if anything fails.
- * Never returns fake/fallback data; callers must handle thrown errors.
+ * Never returns synthetic fallback data; callers must handle thrown errors.
  */
 export async function runGeminiAudit(
   market: MarketInput,

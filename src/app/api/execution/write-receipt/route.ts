@@ -40,8 +40,8 @@ export async function POST(request: Request) {
         error: hasKey
           ? "ARC_PRIVATE_KEY_TESTNET missing. Cannot write to Arc Testnet."
           : hasRegistry
-          ? "ReceiptRegistry address not configured."
-          : "Arc testnet receipt writing is not configured.",
+          ? "ReceiptRegistry address pending configuration."
+          : "Arc testnet receipt writing is pending configuration.",
         missing,
       },
       { status: 400 },

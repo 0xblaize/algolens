@@ -89,7 +89,7 @@ function CreateAgentPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Stable random suffix — generated once per form mount, not on every keystroke
+  // Stable Agent ID base for the current form state.
   const agentId = name.trim() ? `agora-${toAgentSlug(name)}` : "";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -120,7 +120,7 @@ function CreateAgentPanel({
         throw new Error(body.error ?? "Agent creation failed");
       }
 
-      // Save UI display data to localStorage (not the auth token — that's the cookie)
+      // Save Agent Session display data to localStorage. Auth remains cookie-based.
       const profile: AgentProfile = {
         agentId: finalAgentId,
         name: name.trim(),
@@ -219,9 +219,9 @@ function CreateAgentPanel({
         </div>
       </div>
 
-      {/* Generated Agent Profile Preview */}
+      {/* Generated Agent Profile */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Profile Preview</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">Agent Profile</p>
         <div className="mt-3 space-y-2">
           {[
             { label: "Agent ID", value: agentId || "Enter a name above" },
@@ -232,7 +232,7 @@ function CreateAgentPanel({
             {
               label: "Receipt Registry",
               value: process.env.NEXT_PUBLIC_RECEIPT_REGISTRY_ADDRESS
-                ? "Configured ✓"
+                ? "Configured"
                 : "Pending deployment",
             },
           ].map((row) => (
@@ -266,7 +266,7 @@ function CreateAgentPanel({
           <span className="flex items-start gap-2">
             <WalletCards size={15} className="mt-0.5 shrink-0 text-violet-400" />
             <span>
-              Circle Wallets are not configured yet. AgoraLens is using a{" "}
+              Circle Wallets are pending configuration. AgoraLens is using a{" "}
               <strong className="text-white">Local Agent Session</strong> for testnet development.
               Add <code className="rounded bg-white/[0.06] px-1 py-0.5 text-xs">CIRCLE_API_KEY</code> to enable
               wallet-backed onboarding.

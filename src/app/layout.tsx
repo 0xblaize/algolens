@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "AgoraLens | AI Market Integrity",
   description:
-    "AI market integrity dashboard for prediction market audits, simulated USDC routing, and lifecycle settlement monitoring.",
+    "AI market integrity dashboard for prediction market audits, Arc Testnet receipts, and lifecycle settlement monitoring.",
 };
 
 export default function RootLayout({

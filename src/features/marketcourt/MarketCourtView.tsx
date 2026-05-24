@@ -180,7 +180,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
           ) : (
             <p className="text-xs text-zinc-500">
               {marketsState.status === "not-configured"
-                ? "Markets not configured — add Arc env vars."
+                ? "Arc market registry pending configuration."
                 : "No markets found on Arc registry."}
             </p>
           )}
@@ -258,7 +258,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
             {audit ? (
               <p className="text-sm italic leading-6 text-zinc-300">&ldquo;{audit.bullArgument}&rdquo;</p>
             ) : (
-              <p className="text-xs text-zinc-600">Waiting for audit to run...</p>
+              <p className="text-xs text-zinc-600">Ready for MarketCourt audit.</p>
             )}
           </div>
           {audit && (
@@ -291,7 +291,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
 
           <div className="mt-4 rounded-xl bg-[#0a0a14] p-3 font-mono text-[11px] leading-6 min-h-[100px]">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white">
-              {loading ? "● Live Reasoning Log" : audit ? "● Verdict Summary" : "● Awaiting Input"}
+              {loading ? "Live Reasoning Log" : audit ? "MarketCourt Verdict" : "Awaiting Input"}
             </p>
             {loading && (
               <div className="space-y-0.5 text-zinc-400">
@@ -355,7 +355,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
             {audit ? (
               <p className="text-sm italic leading-6 text-zinc-300">&ldquo;{audit.bearArgument}&rdquo;</p>
             ) : (
-              <p className="text-xs text-zinc-600">Waiting for audit to run...</p>
+              <p className="text-xs text-zinc-600">Ready for MarketCourt audit.</p>
             )}
           </div>
           {audit && audit.riskFlags.length > 0 && (
@@ -372,7 +372,7 @@ export function MarketCourtView({ marketsState, signalsState, preselectedMarketI
           )}
           {audit && audit.riskFlags.length === 0 && (
             <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.05] p-3">
-              <p className="text-xs text-emerald-400">✓ No risk flags detected</p>
+              <p className="text-xs text-emerald-400">No risk flags detected</p>
             </div>
           )}
         </div>

@@ -37,6 +37,30 @@ export function LedgerView({
     ? classifyDeadline(selectedMarket.deadline, receiptTimestamp > 0 ? receiptTimestamp : undefined)
     : null;
 
+  function downloadReceipt() {
+    if (!selectedReceipt) return;
+
+    const payload = {
+      receipt: selectedReceipt,
+      market: selectedMarket,
+      explorerUrl: selectedReceipt.txHash
+        ? `${explorerBase}/tx/${selectedReceipt.txHash}`
+        : null,
+      downloadedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `agoralens-receipt-${selectedReceipt.receiptId || "unknown"}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section id="ledger" className="space-y-5">
       {/* Header */}
@@ -70,8 +94,13 @@ export function LedgerView({
               <ExternalLink size={13} /> No TX Hash
             </button>
           )}
-          <button className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500">
-            <Download size={13} /> Download Receipt
+          <button
+            type="button"
+            onClick={downloadReceipt}
+            disabled={!selectedReceipt}
+            className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download size={13} /> Export Receipt
           </button>
         </div>
       </div>
@@ -99,7 +128,7 @@ export function LedgerView({
         <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-violet-400/20 bg-violet-500/[0.03] py-20 text-center">
           <Database size={32} className="text-violet-400/50" />
           <p className="font-semibold text-white">
-            {receiptsState.status === "empty" ? "No Receipts Yet" : "No Receipts Yet"}
+            No Reasoning Receipts Yet
           </p>
           <p className="max-w-xs text-sm text-zinc-500">
             {receiptsState.status === "not-configured"
@@ -245,7 +274,7 @@ export function LedgerView({
                       : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  {tab === "timeline" ? "Workflow Timeline" : "Raw JSON Proof"}
+                  {tab === "timeline" ? "Lifecycle Monitor" : "Receipt JSON"}
                 </button>
               ))}
             </div>

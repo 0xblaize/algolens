@@ -28,7 +28,7 @@ export const navItems = [
 export const trustBadges = [
   "AI Market Integrity",
   "MarketCourt Audit",
-  "USDC Route Simulation",
+  "USDC Route",
   "Lifecycle Monitoring",
 ];
 
@@ -68,7 +68,7 @@ export const flowSteps = [
   },
   {
     title: "USDC Route Simulation",
-    body: "Preview gasless USDC movement through Arc before any real execution.",
+    body: "Size a testnet USDC route through Arc without mainnet funds or real orders.",
     icon: Route,
   },
   {
@@ -87,7 +87,7 @@ export const courtAgents = [
   },
   {
     title: "Bear Agent finds risk, ambiguity, manipulation, and liquidity concerns",
-    body: "Challenges the thesis with adverse cases, source conflicts, and slippage pressure.",
+    body: "Challenges the thesis with adverse cases, source conflicts, and liquidity pressure.",
     accent: "text-rose-300",
     icon: ShieldAlert,
   },
@@ -104,14 +104,14 @@ export const receiptRows = [
   ["Reasoning hash", "0xc22a...f91a772c1"],
   ["Integrity score", "84 / 100"],
   ["Timestamp", "May 22, 2026 14:45 UTC"],
-  ["Simulated Arc receipt status", "Demo verified"],
-  ["USDC route simulation", "Arc gasless route preview"],
+  ["Arc Testnet receipt", "Verified"],
+  ["USDC route", "Testnet receipt only"],
 ];
 
 export const lifecycleSteps = [
   {
     title: "Entry",
-    body: "Position sizing confirmed after MarketCourt approval.",
+    body: "Testnet receipt route confirmed after MarketCourt approval.",
     icon: WalletCards,
   },
   {
@@ -134,7 +134,7 @@ export const lifecycleSteps = [
 export const dashboardStats = [
   { label: "Integrity Score", value: "84.2", hint: "MarketCourt consensus", icon: ShieldCheck },
   { label: "Edge", value: "+15%", hint: "Risk-adjusted signal", icon: Zap },
-  { label: "USDC Route", value: "8.0", hint: "Simulated allocation", icon: CircleDollarSign },
+  { label: "USDC Route", value: "8.0", hint: "Testnet receipt notional", icon: CircleDollarSign },
   { label: "Active Monitor", value: "Live", hint: "Resolution tracking", icon: Activity },
 ];
 
@@ -156,9 +156,9 @@ export const dashboardTabs = [
   {
     id: "execution",
     title: "Execution Engine",
-    subtitle: "Simulated gasless USDC route sizing through Arc for demo-only deployment logic.",
+    subtitle: "Arc Testnet receipt routing with no mainnet funds and no real orders.",
     icon: Zap,
-    stats: ["8.0 USDC simulated", "0.05% slippage", "Arc route preview"],
+    stats: ["8.0 USDC testnet", "No real orders", "Arc Testnet receipt"],
   },
   {
     id: "ledger",

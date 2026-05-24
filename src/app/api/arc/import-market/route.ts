@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   if (missingConfig.length || !process.env.ARC_PRIVATE_KEY_TESTNET) {
     return NextResponse.json(
       {
-        error: "Arc testnet audit target creation is not configured.",
+        error: "Arc testnet audit target creation is pending configuration.",
         missing: [
           ...missingConfig,
           ...(process.env.ARC_PRIVATE_KEY_TESTNET ? [] : ["ARC_PRIVATE_KEY_TESTNET"]),
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   const provider = getArcProvider();
   if (!provider || !marketRegistryAddress) {
     return NextResponse.json(
-      { error: "Arc testnet provider or MarketAuditRegistry address is unavailable." },
+      { error: "Arc testnet provider or MarketAuditRegistry address is pending configuration." },
       { status: 400 },
     );
   }

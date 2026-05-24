@@ -27,8 +27,33 @@ function normalizeReceipt(raw: Record<string, unknown>): ReasoningReceipt {
     lifecycleState: LIFECYCLE_STATES[Number(raw.lifecycleState ?? 0)] ?? "ENTRY",
     timestamp: String(raw.timestamp ?? ""),
     writer: String(raw.writer ?? ""),
+    txHash: String(raw.txHash ?? ""),
     source: "rpc",
   };
+}
+
+async function getReceiptTransactionHashes(
+  contract: NonNullable<ReturnType<typeof getReceiptRegistryContract>>,
+  receiptIds: string[],
+): Promise<Map<string, string>> {
+  const entries = await Promise.all(
+    receiptIds.map(async (receiptId) => {
+      try {
+        const logs = await contract.queryFilter(
+          contract.filters.ReceiptWritten(BigInt(receiptId), null, null),
+          0,
+          "latest",
+        );
+        const log = logs.at(-1);
+        const txHash = log && "transactionHash" in log ? log.transactionHash : "";
+        return txHash ? ([receiptId, txHash] as const) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return new Map(entries.filter((entry): entry is readonly [string, string] => Boolean(entry)));
 }
 
 export async function getArcReceipts(agentId?: string): Promise<ArcDataState<ReasoningReceipt[]>> {
@@ -50,7 +75,7 @@ export async function getArcReceipts(agentId?: string): Promise<ArcDataState<Rea
       return {
         status: "not-configured",
         missing,
-        message: "Arc testnet receipt registry is not configured.",
+        message: "Arc Testnet receipt registry is pending configuration.",
       };
     }
 
@@ -61,12 +86,19 @@ export async function getArcReceipts(agentId?: string): Promise<ArcDataState<Rea
         missing: !agentId ? ["agentId"] : missing,
         message: !agentId
           ? "Select or create an agent to read testnet receipts."
-          : "Arc testnet receipt registry is not configured.",
+          : "Arc Testnet receipt registry is pending configuration.",
       };
     }
 
     const rawReceipts = (await contract.getReceiptsByAgent(agentId)) as Record<string, unknown>[];
     const receipts = rawReceipts.map(normalizeReceipt);
+    const txHashes = await getReceiptTransactionHashes(
+      contract,
+      receipts.map((receipt) => receipt.receiptId).filter(Boolean),
+    );
+    for (const receipt of receipts) {
+      receipt.txHash = txHashes.get(receipt.receiptId) ?? receipt.txHash;
+    }
     if (receipts.length === 0) {
       return {
         status: "empty",

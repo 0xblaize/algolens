@@ -49,7 +49,7 @@ export async function getArcMarkets(): Promise<ArcDataState<ArcMarket[]>> {
       return {
         status: "not-configured",
         missing,
-        message: "Arc testnet market registry is not configured.",
+        message: "Arc Testnet market registry is pending configuration.",
       };
     }
 
@@ -58,7 +58,7 @@ export async function getArcMarkets(): Promise<ArcDataState<ArcMarket[]>> {
       return {
         status: "not-configured",
         missing,
-        message: "Arc testnet market registry is not configured.",
+        message: "Arc Testnet market registry is pending configuration.",
       };
     }
 

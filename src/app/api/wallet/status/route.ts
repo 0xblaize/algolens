@@ -7,7 +7,7 @@ import { getCircleConfigState } from "@/src/lib/circle/config";
 /**
  * GET /api/wallet/status
  *
- * Returns live data only — no placeholders.
+ * Returns live wallet and registry status only.
  *
  * Arc wallet:
  *   - Address derived from ARC_PRIVATE_KEY_TESTNET (safe — public key only)

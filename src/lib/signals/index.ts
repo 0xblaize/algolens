@@ -68,7 +68,7 @@ export async function getPublicSignals(): Promise<SignalDataState> {
   // ── 5. Everything failed, no cache — return clean error state ─────────────
   return {
     status: "error",
-    message: "Live signal providers unavailable. Try again later.",
+    message: "Live signal providers are offline. Try again later.",
     detail: "GDELT and Google News RSS both failed to return signals.",
   };
 }

@@ -98,7 +98,7 @@ export function RadarView({
         signalsState.status === "configured"
           ? signalsState.provider
           : signalsState.status === "error"
-            ? "Unavailable"
+            ? "Provider offline"
             : "No key needed",
       badgeCls:
         signalsState.status === "configured"
@@ -111,7 +111,7 @@ export function RadarView({
       icon: RadioTower,
       label: "Live Markets",
       value: externalMarkets.length > 0 ? String(externalMarkets.length) : "-",
-      badge: externalMarketsState.status === "configured" ? "Polymarket" : "Unavailable",
+      badge: externalMarketsState.status === "configured" ? "Polymarket" : "Source pending",
       badgeCls:
         externalMarketsState.status === "configured"
           ? "text-cyan-300 bg-cyan-400/10"
@@ -195,7 +195,7 @@ export function RadarView({
                 ? "Last successful live signals"
                 : `Live · ${signalsState.provider}`
               : signalsState.status === "error"
-                ? "Providers unavailable"
+                ? "Providers offline"
                 : "No key needed"
           }
           ok={signalsState.status === "configured"}
@@ -206,8 +206,8 @@ export function RadarView({
             externalMarketsState.status === "configured"
               ? "Polymarket"
               : externalMarketsState.status === "error"
-                ? "Unavailable"
-                : "Not configured"
+                ? "Provider offline"
+                : "Source pending"
           }
           ok={externalMarketsState.status === "configured"}
         />
@@ -218,13 +218,13 @@ export function RadarView({
               ? arcMarketsState.status === "configured"
                 ? `Configured (${arcMarketsState.data.length})`
                 : "Configured"
-              : "Not configured"
+              : "Registry pending"
           }
           ok={arcStatus.marketRegistryConfigured}
         />
         <SourceBadge
           label="Receipts"
-          value={arcStatus.receiptRegistryConfigured ? (receiptCount > 0 ? `Ready (${receiptCount})` : "Ready") : "Not configured"}
+          value={arcStatus.receiptRegistryConfigured ? (receiptCount > 0 ? `Ready (${receiptCount})` : "Ready") : "Registry pending"}
           ok={arcStatus.receiptRegistryConfigured}
         />
       </div>
@@ -332,12 +332,12 @@ export function RadarView({
               icon={<RadioTower size={28} className="text-violet-400/50" />}
               title={
                 signalsState.status === "error"
-                  ? "Live signal providers unavailable"
+                  ? "Live signal providers offline"
                   : "No signals loaded"
               }
               body={
                 signalsState.status === "error"
-                  ? "Live signal providers unavailable. Try again later."
+                  ? "Live signal providers are offline. Try again later."
                   : "No matching public signals were returned."
               }
             />
@@ -405,7 +405,7 @@ export function RadarView({
                 externalMarketsState.status === "error"
                   ? "Could not load external markets"
                   : externalMarketsState.status === "not-configured"
-                    ? "Live market source not configured"
+                    ? "Live market source pending"
                     : "No live external markets"
               }
               body={

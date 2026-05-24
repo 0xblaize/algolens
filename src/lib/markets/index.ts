@@ -6,7 +6,7 @@ export async function getExternalMarkets(limit = 30): Promise<ExternalMarketStat
     return {
       status: "not-configured",
       missing: ["LIVE_MARKET_SOURCE"],
-      message: "Live market source not configured.",
+      message: "Live market source pending configuration.",
     };
   }
 
